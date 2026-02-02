@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Setup MFA - NutriDiet{% endblock %}
+
+{% block content %}
+<div class="min-h-[80vh] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div class="sm:mx-auto sm:w-full sm:max-w-md text-center">
+        <div
+            class="bg-blue-100 text-blue-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm border border-blue-200">
+            <i class="fas fa-shield-halved text-2xl"></i>
+        </div>
+        <h2 class="text-3xl font-extrabold text-slate-900">
+            Secure your account
+        </h2>
+        <p class="mt-2 text-sm text-slate-600">
+            Enable Multi-Factor Authentication to keep your health data safe.
+        </p>
+    </div>
+
+    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div class="bg-white py-8 px-4 shadow-xl border border-slate-100 sm:rounded-2xl sm:px-10">
+            {% if wizard.steps.current == 'welcome' %}
+            <p class="mb-6 text-slate-600">
+                To keep your health data safe, we require a second step to verify your identity.
+                A verification code will be sent to your registered email address.
+            </p>
+            {% elif wizard.steps.current == 'email' %}
+            <p class="mb-6 text-slate-600 text-center">
+                <i class="fas fa-envelope-open-text text-4xl text-blue-500 mb-4 block"></i>
+                {% blocktrans %}We've sent a 6-digit verification code to your email address. Please enter it below.{% endblocktrans %}
+            </p>
+            {% endif %}
+
+            <form class="space-y-6" method="post" action="">
+                {% csrf_token %}
+                {{ wizard.management_form }}
+
+                {% for field in form %}
+                <div>
+                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-slate-700">
+                        {{ field.label }}
+                    </label>
+                    <div class="mt-1">
+                        {{ field }}
+                    </div>
+                    {% if field.errors %}
+                    <p class="mt-2 text-sm text-red-600">
+                        {{ field.errors.0 }}
+                    </p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+
+                <div class="flex gap-3">
+                    {% if wizard.steps.prev %}
+                    <button name="wizard_goto_step" type="submit" value="{{ wizard.steps.prev }}"
+                        class="flex-1 flex justify-center py-3 px-4 border border-slate-200 rounded-xl shadow-sm text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-all">
+                        {% trans "Back" %}
+                    </button>
+                    {% endif %}
+
+                    <button type="submit"
+                        class="flex-[2] flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all">
+                        {% if wizard.steps.current == 'generator' or wizard.steps.current == 'email' %}
+                        Verify & Finish
+                        {% else %}
+                        Next
+                        {% endif %}
+                    </button>
+                </div>
+            </form>
+
+            {% if wizard.steps.current == 'email' %}
+            <div class="mt-6 text-center">
+                <button type="button" id="resend-otp-btn"
+                    class="text-sm font-medium text-blue-600 hover:text-blue-500 transition-all">
+                    Resend Code
+                </button>
+                <p id="resend-msg" class="mt-2 text-xs hidden"></p>
+            </div>
+
+            <script>
+                document.getElementById('resend-otp-btn').addEventListener('click', function () {
+                    const btn = this;
+                    const msg = document.getElementById('resend-msg');
+                    btn.disabled = true;
+                    btn.classList.add('opacity-50', 'cursor-not-allowed');
+
+                    fetch("{% url 'resend_otp' %}", {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token }}',
+                        }
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            msg.classList.remove('hidden', 'text-red-500', 'text-green-500');
+                            if (data.success) {
+                                msg.textContent = data.message;
+                                msg.classList.add('text-green-500');
+                            } else {
+                                msg.textContent = data.error;
+                                msg.classList.add('text-red-500');
+                            }
+
+                            setTimeout(() => {
+                                btn.disabled = false;
+                                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                            }, 30000);
+                        })
+                        .catch(error => {
+                            msg.textContent = "Error sending request.";
+                            msg.classList.remove('hidden');
+                            msg.classList.add('text-red-500');
+                            btn.disabled = false;
+                            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                        });
+                });
+            </script>
+            {% endif %}
+
+            {% if wizard.steps.current == 'welcome' %}
+            <div class="mt-6">
+                <a href="{% url 'index' %}" class="block text-center text-sm text-slate-400 hover:text-slate-600">
+                    Skip for now (not recommended)
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border-radius: 0.75rem;
+        border: 1px solid #e2e8f0;
+        background-color: #f8fafc;
+        transition: all 0.2s;
+    }
+
+    input:focus {
+        outline: none;
+        border-color: #3b82f6;
+        background-color: #fff;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+</style>
+{% endblock %}

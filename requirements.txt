@@ -1,0 +1,16 @@
+Django==5.0.1
+djangorestframework==3.14.0
+django-cors-headers==4.3.1
+mysqlclient==2.2.0
+python-dotenv==1.0.0
+Pillow==10.2.0
+google-generativeai
+scikit-learn
+numpy
+pandas
+reportlab
+openpyxl
+
+
+django-mfa2
+fido2

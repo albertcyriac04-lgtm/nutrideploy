@@ -1,0 +1,91 @@
+from rest_framework import serializers
+from .models import UserProfile, FoodItem, ConsumptionLog, WeightRecord
+
+
+class FoodItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FoodItem
+        fields = ['id', 'name', 'calories', 'protein', 'carbs', 'fats', 'category', 'created_at', 'updated_at']
+
+
+class WeightRecordSerializer(serializers.ModelSerializer):
+    user_profile_id = serializers.IntegerField(write_only=True, required=False)
+    
+    class Meta:
+        model = WeightRecord
+        fields = ['id', 'date', 'weight', 'user_profile_id', 'created_at']
+    
+    def create(self, validated_data):
+        # Get user_profile from context (nested route) or from validated_data (direct route)
+        user_profile = self.context.get('user_profile')
+        if not user_profile:
+            user_profile_id = validated_data.pop('user_profile_id', None)
+            if not user_profile_id:
+                raise serializers.ValidationError({'user_profile_id': 'This field is required.'})
+            try:
+                user_profile = UserProfile.objects.get(id=user_profile_id)
+            except UserProfile.DoesNotExist:
+                raise serializers.ValidationError({'user_profile_id': 'User profile not found.'})
+        
+        validated_data['user_profile'] = user_profile
+        return super().create(validated_data)
+
+
+class ConsumptionLogSerializer(serializers.ModelSerializer):
+    food_item = FoodItemSerializer(read_only=True)
+    food_item_id = serializers.IntegerField(write_only=True)
+    user_profile_id = serializers.IntegerField(write_only=True, required=False)
+    total_calories = serializers.ReadOnlyField()
+    
+    class Meta:
+        model = ConsumptionLog
+        fields = ['id', 'date', 'meal_type', 'food_item', 'food_item_id', 'user_profile_id', 'quantity', 'total_calories', 'created_at']
+    
+    def create(self, validated_data):
+        # Get user_profile from context (nested route) or from validated_data (direct route)
+        user_profile = self.context.get('user_profile')
+        if not user_profile:
+            user_profile_id = validated_data.pop('user_profile_id', None)
+            if not user_profile_id:
+                raise serializers.ValidationError({'user_profile_id': 'This field is required.'})
+            try:
+                user_profile = UserProfile.objects.get(id=user_profile_id)
+            except UserProfile.DoesNotExist:
+                raise serializers.ValidationError({'user_profile_id': 'User profile not found.'})
+        
+        # Get food_item with error handling
+        food_item_id = validated_data.pop('food_item_id')
+        try:
+            food_item = FoodItem.objects.get(id=food_item_id)
+        except FoodItem.DoesNotExist:
+            raise serializers.ValidationError({'food_item_id': 'Food item not found.'})
+        
+        validated_data['user_profile'] = user_profile
+        validated_data['food_item'] = food_item
+        return super().create(validated_data)
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    consumption_logs = ConsumptionLogSerializer(many=True, read_only=True)
+    weight_records = WeightRecordSerializer(many=True, read_only=True)
+    
+    class Meta:
+        model = UserProfile
+        fields = [
+            'id', 'name', 'age', 'gender', 'height', 'weight', 
+            'target_weight', 'activity_multiplier', 
+            'consumption_logs', 'weight_records',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class UserProfileListSerializer(serializers.ModelSerializer):
+    """Simplified serializer for list views"""
+    class Meta:
+        model = UserProfile
+        fields = [
+            'id', 'name', 'age', 'gender', 'height', 'weight', 
+            'target_weight', 'activity_multiplier', 'created_at', 'updated_at'
+        ]
+

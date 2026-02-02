@@ -1,20 +1,105 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# NutriDiet Django Backend
 
-# Run and deploy your AI Studio app
+Django REST API backend for NutriDiet nutrition tracking application with MySQL database.
 
-This contains everything you need to run your app locally.
+## Setup Instructions
 
-View your app in AI Studio: https://ai.studio/apps/drive/14LAFQxk-E_oPP36bw42da6vY4d-PBAIL
+### Prerequisites
+- Python 3.8 or higher
+- MySQL Server installed and running
+- pip (Python package manager)
 
-## Run Locally
+### Installation
 
-**Prerequisites:**  Node.js
+1. **Create a virtual environment** (recommended):
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
 
+2. **Install dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+3. **Create MySQL database**:
+   ```sql
+   CREATE DATABASE nutrigem_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+   ```
+
+4. **Configure environment variables**:
+   - Copy `.env.example` to `.env`
+   - Update the database credentials in `.env`:
+     ```
+     DB_NAME=nutrigem_db
+     DB_USER=root
+     DB_PASSWORD=1234
+     DB_HOST=xylo
+     DB_PORT=3306
+     ```
+
+5. **Run migrations**:
+   ```bash
+   python manage.py makemigrations
+   python manage.py migrate
+   ```
+
+6. **Create a superuser** (optional, for admin access):
+   ```bash
+   python manage.py createsuperuser
+   ```
+
+7. **Load initial food data** (optional):
+   ```bash
+   python manage.py loaddata initial_food_data.json
+   ```
+
+8. **Run the development server**:
+   ```bash
+   python manage.py runserver
+   ```
+
+The API will be available at `http://localhost:8000/api/`
+
+## API Endpoints
+
+### User Profiles
+- `GET /api/profiles/` - List all user profiles
+- `POST /api/profiles/` - Create a new user profile
+- `GET /api/profiles/{id}/` - Get a specific user profile
+- `PUT /api/profiles/{id}/` - Update a user profile
+- `DELETE /api/profiles/{id}/` - Delete a user profile
+- `GET /api/profiles/{id}/consumption-logs/` - Get consumption logs for a profile
+- `POST /api/profiles/{id}/consumption-logs/` - Add a consumption log
+- `GET /api/profiles/{id}/weight-records/` - Get weight records for a profile
+- `POST /api/profiles/{id}/weight-records/` - Add a weight record
+- `GET /api/profiles/{id}/dashboard-stats/` - Get calculated dashboard statistics
+
+### Food Items
+- `GET /api/food-items/` - List all food items
+- `POST /api/food-items/` - Create a new food item
+- `GET /api/food-items/{id}/` - Get a specific food item
+- `PUT /api/food-items/{id}/` - Update a food item
+- `DELETE /api/food-items/{id}/` - Delete a food item
+
+### Consumption Logs
+- `GET /api/consumption-logs/` - List all consumption logs
+- `GET /api/consumption-logs/?user_profile={id}` - Filter by user profile
+- `POST /api/consumption-logs/` - Create a new consumption log
+
+### Weight Records
+- `GET /api/weight-records/` - List all weight records
+- `GET /api/weight-records/?user_profile={id}` - Filter by user profile
+- `POST /api/weight-records/` - Create a new weight record
+
+## Database Models
+
+- **UserProfile**: Stores user profile information (name, age, gender, height, weight, target weight, activity level)
+- **FoodItem**: Stores food items with nutritional information
+- **ConsumptionLog**: Tracks food consumption entries
+- **WeightRecord**: Tracks weight history over time
+
+## Admin Panel
+
+Access the Django admin panel at `http://localhost:8000/admin/` to manage data through the web interface.
+

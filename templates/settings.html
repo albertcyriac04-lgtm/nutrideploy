@@ -1,0 +1,286 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-8 pb-12">
+    <!-- Profile & Health Settings -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div class="p-8 border-b border-slate-50 flex items-center justify-between">
+            <div>
+                <h2 class="text-2xl font-bold text-slate-800">Profile Settings</h2>
+                <p class="text-sm text-slate-500">Manage your health metrics and preferences</p>
+            </div>
+            <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                <i class="fas fa-user-gear text-xl"></i>
+            </div>
+        </div>
+
+        <form method="POST" class="p-8 space-y-6">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="update_profile">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Display
+                        Name</label>
+                    <input type="text" name="name" value="{{ profile.name }}"
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                        required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Email
+                        Address</label>
+                    <input type="email" name="email" value="{{ user.email }}"
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                        required>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Age</label>
+                    <input type="number" name="age" value="{{ profile.age }}"
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                        required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Gender</label>
+                    <select name="gender"
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                        required>
+                        <option value="Male" {% if profile.gender == "Male" %}selected{% endif %}>Male</option>
+                        <option value="Female" {% if profile.gender == "Female" %}selected{% endif %}>Female</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Weight
+                        (kg)</label>
+                    <input type="number" name="weight" value="{{ profile.weight }}" step="0.1"
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                        required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Height
+                        (cm)</label>
+                    <input type="number" name="height" value="{{ profile.height }}" step="0.1"
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                        required>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Activity
+                        Level</label>
+                    <select name="activity_multiplier"
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                        required>
+                        <option value="1.2" {% if profile.activity_multiplier == 1.2 %}selected{% endif %}>Sedentary
+                        </option>
+                        <option value="1.375" {% if profile.activity_multiplier == 1.375 %}selected{% endif %}>Light
+                        </option>
+                        <option value="1.55" {% if profile.activity_multiplier == 1.55 %}selected{% endif %}>Moderate
+                        </option>
+                        <option value="1.725" {% if profile.activity_multiplier == 1.725 %}selected{% endif %}>Active
+                        </option>
+                        <option value="1.9" {% if profile.activity_multiplier == 1.9 %}selected{% endif %}>Extra Active
+                        </option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Nutri
+                        Preference</label>
+                    <select name="dietary_preference"
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                        required>
+                        <option value="Veg" {% if profile.dietary_preference == "Veg" %}selected{% endif %}>Vegetarian
+                        </option>
+                        <option value="Non-Veg" {% if profile.dietary_preference == "Non-Veg" %}selected{% endif %}>
+                            Non-Vegetarian</option>
+                        <option value="Vegan" {% if profile.dietary_preference == "Vegan" %}selected{% endif %}>Vegan
+                        </option>
+                    </select>
+                </div>
+            </div>
+
+            <button type="submit"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg shadow-blue-200">
+                Save Profile Changes
+            </button>
+        </form>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- Account Security -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden h-full">
+            <div class="p-6 border-b border-slate-50 flex items-center justify-between">
+                <div>
+                    <h3 class="text-xl font-bold text-slate-800">Security</h3>
+                    <p class="text-xs text-slate-500">Update your account password</p>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center">
+                    <i class="fas fa-shield-halved"></i>
+                </div>
+            </div>
+            <form method="POST" class="p-6 space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="change_password">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Current
+                        Password</label>
+                    <input type="password" name="old_password"
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                        required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">New
+                        Password</label>
+                    <input type="password" name="new_password1" placeholder="Minimum 8 characters"
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                        required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Confirm
+                        Password</label>
+                    <input type="password" name="new_password2"
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                        required>
+                </div>
+                <button type="submit"
+                    class="w-full bg-slate-900 hover:bg-black text-white font-bold py-3 rounded-xl transition-all">
+                    Change Password
+                </button>
+                <p class="text-[10px] text-slate-400 text-center italic">Note: You will stay logged in after change.</p>
+            </form>
+        </div>
+
+        <!-- Subscription Status -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden h-full">
+            <div class="p-6 border-b border-slate-50 flex items-center justify-between">
+                <div>
+                    <h3 class="text-xl font-bold text-slate-800">Subscription</h3>
+                    <p class="text-xs text-slate-500">Your current membership status</p>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <i class="fas fa-crown"></i>
+                </div>
+            </div>
+            <div class="p-8 flex flex-col items-center justify-center text-center space-y-4 h-[calc(100%-80px)]">
+                <div
+                    class="w-16 h-16 rounded-3xl {% if profile.is_pro %}bg-emerald-600 rotate-12{% else %}bg-slate-200{% endif %} flex items-center justify-center text-white mb-2 shadow-xl">
+                    <i class="fas fa-gem text-2xl"></i>
+                </div>
+                <div>
+                    <h4 class="text-2xl font-black text-slate-800">{{ profile.subscription_status }} Plan</h4>
+                    {% if profile.is_pro %}
+                    <p class="text-sm text-emerald-600 font-bold mb-4">Express Status Active</p>
+                    <div class="flex flex-col items-center">
+                        <span
+                            class="px-6 py-2 bg-slate-50 text-slate-400 rounded-full text-xs font-black uppercase inline-block">Active
+                            Subscription</span>
+                        <a href="{% url 'billing' %}"
+                            class="mt-4 text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1">
+                            <i class="fas fa-file-invoice-dollar"></i>
+                            View Billing History
+                        </a>
+                    </div>
+                    {% else %}
+                    <p class="text-sm text-slate-400 mb-6">Upgrade to unlock AI habit analysis and more.</p>
+                    {% for plan in plans %}
+                    <div class="bg-emerald-50 rounded-2xl p-4 border border-emerald-100 mb-4 w-full">
+                        <span class="text-[10px] font-bold text-emerald-600 uppercase">{{ plan.name }}</span>
+                        <p class="text-2xl font-black text-emerald-800">${{ plan.amount }}<span
+                                class="text-sm font-normal text-emerald-600">/mo</span></p>
+                    </div>
+                    {% endfor %}
+                    <a href="{% url 'billing' %}"
+                        class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-emerald-200 block">
+                        Upgrade Now
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Passkeys Management -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div class="p-6 border-b border-slate-50 flex items-center justify-between">
+            <div>
+                <h3 class="text-xl font-bold text-slate-800">Passkeys</h3>
+                <p class="text-xs text-slate-500">Enable faster, more secure login using your device's biometrics or
+                    password.</p>
+            </div>
+            <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                <i class="fas fa-fingerprint text-lg"></i>
+            </div>
+        </div>
+        <div class="p-8">
+            <div class="flex items-center gap-4 p-4 bg-purple-50 rounded-2xl border border-purple-100 mb-6">
+                <div class="text-purple-600">
+                    <i class="fas fa-info-circle text-xl"></i>
+                </div>
+                <p class="text-sm text-purple-800">
+                    Passkeys allow you to log in securely without entering a password or waiting for email codes.
+                    They use your computer or phone's built-in security.
+                </p>
+            </div>
+
+            <a href="/mfa/fido2/register/"
+                class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-purple-100 flex items-center justify-center gap-2">
+                <i class="fas fa-plus"></i>
+                Register New Passkey
+            </a>
+
+            <p class="mt-4 text-[10px] text-slate-400 text-center">
+                Supported on Chrome, Edge, Safari, and other modern browsers with Windows Hello, Face ID, or Touch ID.
+            </p>
+        </div>
+    </div>
+</div>
+<!-- Export Reports Section -->
+<div class="bg-slate-900 rounded-3xl shadow-xl p-8 text-white relative overflow-hidden">
+    <div class="relative z-10">
+        <div class="flex items-center gap-4 mb-8">
+            <div class="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-md">
+                <i class="fas fa-file-pdf text-2xl"></i>
+            </div>
+            <div>
+                <h2 class="text-2xl font-bold">Health & Consumption Reports</h2>
+                <p class="text-slate-400 text-sm">Download your complete history as PDF or Excel</p>
+            </div>
+        </div>
+
+        <form action="{% url 'export_report' %}" method="get" class="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">From Date</label>
+                <input type="date" name="start_date" value="{{ default_start_date }}"
+                    class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-white">
+            </div>
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">To Date</label>
+                <input type="date" name="end_date" value="{{ default_end_date }}"
+                    class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-white">
+            </div>
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Format</label>
+                <select name="format"
+                    class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-white">
+                    <option value="pdf" selected class="bg-slate-800">PDF Report</option>
+                    <option value="excel" class="bg-slate-800">Excel Data</option>
+                </select>
+            </div>
+            <div class="flex items-end">
+                <button type="submit"
+                    class="w-full bg-white text-slate-900 font-black py-3 rounded-xl hover:bg-blue-50 transition-all flex items-center justify-center gap-2">
+                    <i class="fas fa-download"></i>
+                    Generate
+                </button>
+            </div>
+        </form>
+    </div>
+    <!-- Decorative blob -->
+    <div class="absolute -right-20 -bottom-20 w-64 h-64 bg-blue-600/20 rounded-full blur-3xl"></div>
+</div>
+</div>
+{% endblock %}
