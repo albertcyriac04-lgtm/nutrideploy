@@ -35,7 +35,7 @@ Copy `.env.example` to `.env` and update with your MySQL credentials:
 ```env
 DB_NAME=nutrigem_db
 DB_USER=root
-DB_PASSWORD=1234
+DB_PASSWORD=your_password
 DB_HOST=localhost
 DB_PORT=3306
 ```

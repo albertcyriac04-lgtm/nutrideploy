@@ -33,8 +33,8 @@ Django REST API backend for NutriDiet nutrition tracking application with MySQL 
      ```
      DB_NAME=nutrigem_db
      DB_USER=root
-     DB_PASSWORD=1234
-     DB_HOST=xylo
+     DB_PASSWORD=your_password
+     DB_HOST=localhost
      DB_PORT=3306
      ```
 
@@ -54,10 +54,7 @@ Django REST API backend for NutriDiet nutrition tracking application with MySQL 
    python manage.py loaddata initial_food_data.json
    ```
 
-8. **Run the development server**:
-   ```bash
-   python manage.py runserver
-   ```
+
 
 The API will be available at `http://localhost:8000/api/`
 
