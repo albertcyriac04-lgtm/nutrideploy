@@ -1,5 +1,8 @@
 from django.contrib.admin import AdminSite
+from django.contrib.auth import logout as auth_logout
 from django.contrib.auth.models import User
+from django.http import HttpResponseRedirect
+from django.urls import reverse
 from django.utils import timezone
 from django.db.models import Sum, Count
 from django.template.response import TemplateResponse
@@ -11,6 +14,10 @@ class NutriDietAdminSite(AdminSite):
     site_header = "NutriDiet Admin"
     site_title = "NutriDiet Admin"
     index_title = "Dashboard"
+
+    def logout(self, request, extra_context=None):
+        auth_logout(request)
+        return HttpResponseRedirect(reverse("landing"))
 
     def index(self, request, extra_context=None):
         from api.models import (

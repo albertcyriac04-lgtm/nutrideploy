@@ -1,0 +1,682 @@
+﻿{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+    :root {
+        --nd-bg: #f8fafc;
+        --nd-surface: #ffffff;
+        --nd-border: #e2e8f0;
+        --nd-text: #0f172a;
+        --nd-muted: #64748b;
+        --nd-primary: #10b981;
+        --nd-primary-strong: #059669;
+    }
+
+    /* Override Django admin styles */
+    body {
+        font-family: 'Inter', sans-serif !important;
+        background: var(--nd-bg) !important;
+        margin: 0 !important;
+        color: var(--nd-text) !important;
+    }
+
+    #header {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+        padding: 16px 24px !important;
+        box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3) !important;
+        border-bottom: none !important;
+    }
+
+    #header h1,
+    #header #site-name a {
+        color: white !important;
+        font-weight: 800 !important;
+        font-size: 1.25rem !important;
+        letter-spacing: -0.025em !important;
+    }
+
+    #user-tools {
+        font-size: 0.875rem !important;
+        font-weight: 500 !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+    }
+
+    #user-tools a {
+        color: rgba(255, 255, 255, 0.85) !important;
+        text-decoration: none !important;
+        padding: 6px 14px !important;
+        border-radius: 10px !important;
+        transition: all 0.2s !important;
+        background: rgba(255, 255, 255, 0.1) !important;
+        margin-left: 4px !important;
+    }
+
+    #user-tools strong {
+        color: #fef08a !important;
+    }
+
+    #user-tools .nd-logout-form {
+        display: inline-flex !important;
+        margin: 0 !important;
+    }
+
+    #user-tools .nd-logout-btn {
+        color: rgba(255, 255, 255, 0.92) !important;
+        background: rgba(255, 255, 255, 0.1) !important;
+        border: 1px solid rgba(255, 255, 255, 0.18) !important;
+        border-radius: 10px !important;
+        padding: 6px 14px !important;
+        font-size: 0.875rem !important;
+        font-weight: 600 !important;
+        line-height: 1.2 !important;
+        cursor: pointer !important;
+    }
+
+    #user-tools .nd-logout-btn:hover {
+        background: rgba(255, 255, 255, 0.25) !important;
+        color: white !important;
+    }
+
+    #user-tools a:hover {
+        background: rgba(255, 255, 255, 0.25) !important;
+        color: white !important;
+    }
+
+    /* Breadcrumbs */
+    div.breadcrumbs {
+        background: var(--nd-surface) !important;
+        padding: 12px 24px !important;
+        border-bottom: 1px solid var(--nd-border) !important;
+        color: var(--nd-muted) !important;
+        font-size: 0.85rem !important;
+    }
+
+    div.breadcrumbs a {
+        color: #10b981 !important;
+        text-decoration: none !important;
+        font-weight: 500 !important;
+    }
+
+    /* Content area */
+    #content {
+        padding: 24px !important;
+    }
+
+    #content h1 {
+        font-weight: 800 !important;
+        font-size: 1.75rem !important;
+        color: var(--nd-text) !important;
+        margin-bottom: 24px !important;
+    }
+
+    /* Module headers (API, Authentication etc) */
+    .module h2,
+    .module caption {
+        background: #f8fafc !important;
+        color: var(--nd-text) !important;
+        border-bottom: 1px solid var(--nd-border) !important;
+        border-radius: 14px 14px 0 0 !important;
+    }
+
+    .module h2 a,
+    .module caption a {
+        color: var(--nd-text) !important;
+    }
+
+    .module h2,
+    .module caption {
+        padding: 12px 20px !important;
+        font-weight: 700 !important;
+        font-size: 0.8rem !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.08em !important;
+    }
+
+    .module {
+        background: var(--nd-surface) !important;
+        border: 1px solid var(--nd-border) !important;
+        border-radius: 14px !important;
+        overflow: hidden !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+        margin-bottom: 20px !important;
+    }
+
+    /* Table styling */
+    .module table {
+        border-collapse: collapse !important;
+    }
+
+    .module table th {
+        background: #f8fafc !important;
+        color: #475569 !important;
+        font-weight: 700 !important;
+        font-size: 0.7rem !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.06em !important;
+        padding: 12px 16px !important;
+        border-bottom: 2px solid var(--nd-border) !important;
+    }
+
+    .module table td {
+        padding: 12px 16px !important;
+        border-bottom: 1px solid #f1f5f9 !important;
+        color: #334155 !important;
+        font-size: 0.875rem !important;
+    }
+
+    .module table tr:hover td {
+        background: #f8fafc !important;
+    }
+
+    .module table td a {
+        color: var(--nd-primary) !important;
+        font-weight: 600 !important;
+        text-decoration: none !important;
+    }
+
+    .module table td a:hover {
+        color: var(--nd-primary-strong) !important;
+        text-decoration: underline !important;
+    }
+
+    /* Add/Change links */
+    .addlink,
+    .changelink,
+    .viewlink {
+        color: var(--nd-primary) !important;
+        font-weight: 600 !important;
+        text-decoration: none !important;
+        font-size: 0.8rem !important;
+        padding: 4px 10px !important;
+        border-radius: 8px !important;
+        transition: all 0.2s !important;
+    }
+
+    .addlink:hover,
+    .changelink:hover,
+    .viewlink:hover {
+        background: #eff6ff !important;
+    }
+
+    /* Buttons */
+    input[type="submit"],
+    .submit-row input,
+    button[type="submit"],
+    .button,
+    a.button {
+        background: linear-gradient(135deg, var(--nd-primary) 0%, var(--nd-primary-strong) 100%) !important;
+        color: white !important;
+        border: none !important;
+        border: none !important;
+        padding: 10px 24px !important;
+        border-radius: 12px !important;
+        font-weight: 700 !important;
+        font-size: 0.875rem !important;
+        cursor: pointer !important;
+        transition: all 0.2s !important;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25) !important;
+    }
+
+    input[type="submit"]:hover,
+    .submit-row input:hover,
+    button[type="submit"]:hover {
+        transform: translateY(-1px) !important;
+        box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35) !important;
+    }
+
+    .submit-row {
+        background: #f8fafc !important;
+        border-top: 1px solid #e2e8f0 !important;
+        padding: 16px 20px !important;
+        border-radius: 0 0 14px 14px !important;
+    }
+
+    .deletelink,
+    input.default[type="submit"].deletelink-box {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25) !important;
+    }
+
+    /* Form fields */
+    input[type="text"],
+    input[type="password"],
+    input[type="email"],
+    input[type="url"],
+    input[type="number"],
+    input[type="date"],
+    textarea,
+    select {
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 10px !important;
+        padding: 10px 14px !important;
+        font-family: 'Inter', sans-serif !important;
+        font-size: 0.875rem !important;
+        transition: all 0.2s !important;
+        background: #f8fafc !important;
+    }
+
+    input[type="text"]:focus,
+    input[type="password"]:focus,
+    textarea:focus,
+    select:focus {
+        outline: none !important;
+        border-color: #10b981 !important;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
+        background: white !important;
+    }
+
+    /* Labels */
+    label {
+        font-weight: 600 !important;
+        color: #334155 !important;
+        font-size: 0.85rem !important;
+    }
+
+    /* Recent actions */
+    #recent-actions-module {
+        background: white !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 14px !important;
+        overflow: hidden !important;
+    }
+
+    #recent-actions-module h2 {
+        background: #1e293b !important;
+        color: white !important;
+        padding: 12px 20px !important;
+        font-weight: 700 !important;
+        font-size: 0.8rem !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.08em !important;
+    }
+
+    #recent-actions-module .actionlist li {
+        padding: 10px 16px !important;
+        border-bottom: 1px solid #f1f5f9 !important;
+        font-size: 0.875rem !important;
+    }
+
+    /* Pagination */
+    .paginator {
+        padding: 12px 16px !important;
+        background: #f8fafc !important;
+        border-top: 1px solid #e2e8f0 !important;
+        border-radius: 0 0 14px 14px !important;
+    }
+
+    /* Error list, help text */
+    .errorlist li {
+        color: #ef4444 !important;
+        font-size: 0.8rem !important;
+    }
+
+    .help {
+        color: #94a3b8 !important;
+        font-size: 0.75rem !important;
+    }
+
+    /* Sidebar filters */
+    #changelist-filter {
+        background: white !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 14px !important;
+        padding: 16px !important;
+    }
+
+    #changelist-filter h2 {
+        background: transparent !important;
+        color: #1e293b !important;
+        font-size: 0.85rem !important;
+        font-weight: 800 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.06em !important;
+        padding: 0 0 12px 0 !important;
+        border-bottom: 2px solid #e2e8f0 !important;
+    }
+
+    #changelist-filter h3 {
+        color: #475569 !important;
+        font-size: 0.8rem !important;
+        font-weight: 700 !important;
+        margin: 12px 0 4px !important;
+    }
+
+    #changelist-filter li a {
+        color: #64748b !important;
+        font-size: 0.8rem !important;
+        padding: 4px 8px !important;
+        border-radius: 6px !important;
+        display: block !important;
+    }
+
+    #changelist-filter li a:hover,
+    #changelist-filter li a.selected {
+        background: #eff6ff !important;
+        color: #10b981 !important;
+        font-weight: 600 !important;
+    }
+
+    /* Search bar */
+    #changelist #toolbar {
+        background: transparent !important;
+        padding: 0 0 16px 0 !important;
+        border: none !important;
+    }
+
+    #searchbar {
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 12px !important;
+        padding: 10px 16px 10px 40px !important;
+        font-size: 0.875rem !important;
+        width: 300px !important;
+        background: white !important;
+        line-height: 1.4 !important;
+        min-height: 42px !important;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'%3E%3C/line%3E%3C/svg%3E") !important;
+        background-repeat: no-repeat !important;
+        background-size: 16px 16px !important;
+        background-position: 14px center !important;
+    }
+
+    #searchbar::placeholder {
+        color: #94a3b8 !important;
+        opacity: 1 !important;
+    }
+
+    #nav-filter {
+        border: 1px solid var(--nd-border) !important;
+        border-radius: 10px !important;
+        padding: 10px 12px 10px 38px !important;
+        min-height: 40px !important;
+        line-height: 1.4 !important;
+        font-size: 0.95rem !important;
+        color: #334155 !important;
+        background-color: var(--nd-surface) !important;
+        background-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'%3E%3C/line%3E%3C/svg%3E\") !important;
+        background-repeat: no-repeat !important;
+        background-size: 15px 15px !important;
+        background-position: 12px center !important;
+    }
+
+    #nav-filter::placeholder {
+        color: #94a3b8 !important;
+        opacity: 1 !important;
+    }
+
+    #nav-filter:focus,
+    #searchbar:focus {
+        outline: none !important;
+        border-color: #60a5fa !important;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18) !important;
+    }
+
+    /* Keep search and action buttons consistent across admin pages */
+    #changelist-search input[type="submit"],
+    #changelist-search button[type="submit"],
+    #changelist-form .actions button,
+    #changelist-form .actions .button,
+    #changelist-form .actions input[type="submit"] {
+        min-width: 96px !important;
+        height: 42px !important;
+        padding: 0 16px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        line-height: 1 !important;
+        font-size: 0.95rem !important;
+        font-weight: 700 !important;
+        border-radius: 12px !important;
+        vertical-align: middle !important;
+    }
+
+    #changelist-form .actions {
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
+        flex-wrap: wrap !important;
+    }
+
+    /* Object tools (Add button etc) */
+    .object-tools li a {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+        border-radius: 10px !important;
+        padding: 8px 16px !important;
+        font-size: 0.8rem !important;
+        font-weight: 600 !important;
+        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2) !important;
+    }
+
+    /* Calendar and date widgets */
+    .calendarbox,
+    .clockbox {
+        border-radius: 12px !important;
+        overflow: hidden !important;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+    }
+
+    /* Inline groups */
+    .inline-group h2 {
+        background: #f1f5f9 !important;
+        color: #1e293b !important;
+    }
+
+    /* Dashboard layout fix */
+    #content-main {
+        max-width: 100% !important;
+    }
+
+    /* Left navigation */
+    #nav-sidebar {
+        background: #ffffff !important;
+        border-right: 1px solid #e2e8f0 !important;
+        box-shadow: none !important;
+    }
+
+    #nav-sidebar .current-app .section,
+    #nav-sidebar .app-auth .section {
+        background: #eff6ff !important;
+        color: var(--nd-primary) !important;
+        border: 1px solid #bfdbfe !important;
+        border-radius: 12px 12px 0 0 !important;
+    }
+
+    #nav-sidebar a {
+        color: #334155 !important;
+        border-radius: 8px !important;
+        margin: 2px 6px !important;
+        padding: 8px 10px !important;
+    }
+
+    #nav-sidebar a:hover {
+        background: #eff6ff !important;
+        color: #059669 !important;
+    }
+
+    #toggle-nav-sidebar {
+        background: var(--nd-primary) !important;
+        color: #ffffff !important;
+        border: none !important;
+    }
+
+    /* Changelist and form pages */
+    #changelist {
+        background: transparent !important;
+    }
+
+    .change-list .results,
+    .change-form .aligned {
+        border-radius: 12px !important;
+        overflow: hidden !important;
+    }
+
+    .change-form .form-row,
+    .change-form .form-row .fieldBox,
+    .change-form .form-row div {
+        border-color: #e2e8f0 !important;
+    }
+
+    .aligned label {
+        color: #334155 !important;
+        font-weight: 700 !important;
+    }
+
+    .change-form .aligned .vTextField,
+    .change-form .aligned .vURLField,
+    .change-form .aligned .vDateField,
+    .change-form .aligned .vTimeField,
+    .change-form .aligned .vIntegerField,
+    .change-form .aligned .vLargeTextField,
+    .change-form .aligned select {
+        width: min(100%, 560px) !important;
+    }
+
+    .change-form .help {
+        margin-top: 4px !important;
+        color: #64748b !important;
+    }
+
+    .change-form .errors,
+    .change-form .errornote {
+        border-radius: 10px !important;
+    }
+
+    .inline-group {
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 12px !important;
+        overflow: hidden !important;
+        background: #ffffff !important;
+    }
+
+    .inline-group .tabular tr.has_original td,
+    .inline-group .tabular tr td {
+        border-bottom: 1px solid #f1f5f9 !important;
+    }
+
+    .selector {
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 12px !important;
+        overflow: hidden !important;
+    }
+
+    .selector .selector-available h2,
+    .selector .selector-chosen h2 {
+        background: #f8fafc !important;
+        color: #334155 !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+    }
+
+    /* Footer */
+    #footer {
+        display: none !important;
+    }
+
+    /* Change list results */
+    #result_list {
+        border-radius: 14px !important;
+        overflow: hidden !important;
+        border: 1px solid #e2e8f0 !important;
+    }
+
+    #result_list thead th {
+        background: #f8fafc !important;
+    }
+
+    /* Checkbox styling */
+    input[type="checkbox"] {
+        accent-color: #10b981 !important;
+        width: 16px !important;
+        height: 16px !important;
+    }
+
+    /* Admin login page override */
+    body.login #container {
+        background: #f1f5f9 !important;
+    }
+
+    body.login #header {
+        display: none !important;
+    }
+</style>
+{% endblock %}
+
+{% block branding %}
+<div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <div
+            style="background: rgba(255,255,255,0.15); width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+            <i class="fas fa-gem" style="color: white; font-size: 1rem;"></i>
+        </div>
+        <h1 id="site-name"><a href="{% url 'admin:index' %}">NutriDiet Admin</a></h1>
+    </div>
+    <div
+        style="color: rgba(255,255,255,0.92); font-size: 0.8rem; font-weight: 700; background: rgba(255,255,255,0.1); padding: 6px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.16); letter-spacing: 0.02em;">
+        Admin Control Panel
+    </div>
+</div>
+{% endblock %}
+
+{% block userlinks %}
+{% if site_url %}
+<a href="{{ site_url }}">{% translate 'View site' %}</a>
+{% endif %}
+{% if user.is_active and user.is_staff %}
+{% url 'admin:password_change' as password_change_url %}
+{% if password_change_url %}
+<a href="{{ password_change_url }}">{% translate 'Change password' %}</a>
+{% endif %}
+{% endif %}
+<form id="logout-form" method="post" action="{% url 'admin:logout' %}" class="nd-logout-form">
+    {% csrf_token %}
+    <button type="submit" class="nd-logout-btn">{% translate 'Log out' %}</button>
+</form>
+{% endblock %}
+
+{% block nav-global %}{% endblock %}
+
+<script>
+    (function () {
+        function getCookie(name) {
+            const cookies = document.cookie ? document.cookie.split(';') : [];
+            for (let i = 0; i < cookies.length; i += 1) {
+                const c = cookies[i].trim();
+                if (c.startsWith(name + '=')) {
+                    return decodeURIComponent(c.slice(name.length + 1));
+                }
+            }
+            return '';
+        }
+
+        function syncCsrfToken(form) {
+            const token = getCookie('csrftoken');
+            if (!token) return;
+            let input = form.querySelector('input[name="csrfmiddlewaretoken"]');
+            if (!input) {
+                input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'csrfmiddlewaretoken';
+                form.appendChild(input);
+            }
+            input.value = token;
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const postForms = document.querySelectorAll('form[method="post"], form[method="POST"]');
+            postForms.forEach(function (form) {
+                syncCsrfToken(form);
+                form.addEventListener('submit', function () {
+                    syncCsrfToken(form);
+                });
+            });
+        });
+    })();
+</script>
+

@@ -1,0 +1,525 @@
+﻿{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block title %}Analytics Dashboard - NutriDiet Admin{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --nd-bg: #f8fafc;
+        --nd-surface: #ffffff;
+        --nd-border: #e2e8f0;
+        --nd-text: #0f172a;
+        --nd-muted: #64748b;
+        --nd-primary: #10b981;
+        --nd-success: #16a34a;
+        --nd-warning: #d97706;
+        --nd-pink: #db2777;
+    }
+
+    #content h1 {
+        display: none !important;
+    }
+
+    .nd-admin-dashboard {
+        font-family: 'Inter', sans-serif;
+        max-width: 1320px;
+        margin: 0 auto;
+    }
+
+    .nd-header {
+        margin-bottom: 22px;
+        background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+        border: 1px solid var(--nd-border);
+        border-radius: 18px;
+        padding: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+    }
+
+    .nd-header h1 {
+        display: block !important;
+        margin: 0 0 6px;
+        font-size: 1.7rem;
+        font-weight: 800;
+        color: var(--nd-text);
+    }
+
+    .nd-header p {
+        margin: 0;
+        color: var(--nd-muted);
+        font-size: 0.92rem;
+    }
+
+    .nd-theme-pill {
+        background: #eff6ff;
+        color: var(--nd-primary);
+        border: 1px solid #bfdbfe;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 8px 12px;
+        white-space: nowrap;
+    }
+
+    .nd-grid {
+        display: grid;
+        gap: 16px;
+    }
+
+    .nd-stats {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        margin-bottom: 20px;
+    }
+
+    .nd-card {
+        background: var(--nd-surface);
+        border: 1px solid var(--nd-border);
+        border-radius: 16px;
+        padding: 18px;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+    }
+
+    .nd-card-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+    }
+
+    .nd-label {
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--nd-muted);
+    }
+
+    .nd-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.875rem;
+    }
+
+    .nd-value {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 900;
+        line-height: 1;
+        color: var(--nd-text);
+    }
+
+    .nd-sub {
+        margin: 8px 0 0;
+        font-size: 0.8rem;
+        color: var(--nd-muted);
+    }
+
+    .nd-positive {
+        color: #16a34a;
+        font-weight: 700;
+    }
+
+    .nd-charts {
+        grid-template-columns: 2fr 1fr 1fr;
+        margin-bottom: 20px;
+    }
+
+    .nd-panel-title {
+        margin: 0 0 16px;
+        font-size: 0.85rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--nd-text);
+    }
+
+    .nd-chart-wrap {
+        position: relative;
+        height: 260px;
+    }
+
+    .nd-chart-mini-wrap {
+        position: relative;
+        height: 240px;
+    }
+
+    .nd-lower {
+        grid-template-columns: 1fr 1fr;
+        margin-bottom: 20px;
+    }
+
+    .nd-activity-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .nd-activity-item {
+        background: var(--nd-bg);
+        border: 1px solid var(--nd-border);
+        border-radius: 10px;
+        padding: 14px;
+        text-align: center;
+    }
+
+    .nd-activity-item p:first-child {
+        margin: 0;
+        font-size: 1.35rem;
+        font-weight: 900;
+        color: var(--nd-text);
+    }
+
+    .nd-activity-item p:last-child {
+        margin: 4px 0 0;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--nd-muted);
+    }
+
+    .nd-users {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .nd-user-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: var(--nd-bg);
+        border: 1px solid var(--nd-border);
+        border-radius: 10px;
+        padding: 10px;
+    }
+
+    .nd-user-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #10b981, #0ea5e9);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 0.8rem;
+    }
+
+    .nd-user-main {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .nd-user-main p {
+        margin: 0;
+    }
+
+    .nd-user-name {
+        color: var(--nd-text);
+        font-size: 0.85rem;
+        font-weight: 700;
+    }
+
+    .nd-user-email {
+        color: var(--nd-muted);
+        font-size: 0.75rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .nd-user-time {
+        font-size: 0.7rem;
+        color: #94a3b8;
+        font-weight: 600;
+    }
+
+    @media (max-width: 1200px) {
+        .nd-stats {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .nd-charts,
+        .nd-lower {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .nd-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .nd-stats,
+        .nd-activity-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .nd-value {
+            font-size: 1.6rem;
+        }
+
+        .nd-chart-wrap {
+            height: 220px;
+        }
+    }
+</style>
+
+<div class="nd-admin-dashboard">
+    <div class="nd-header">
+        <div>
+            <h1><i class="fas fa-chart-line" style="color:#10b981; margin-right:8px;"></i>NutriDiet Admin Insights</h1>
+            <p>Same visual system as your user app, with live platform analytics.</p>
+        </div>
+        <span class="nd-theme-pill"><i class="fas fa-palette"></i> User Theme Synced</span>
+    </div>
+
+    <div class="nd-grid nd-stats">
+        <div class="nd-card">
+            <div class="nd-card-top">
+                <span class="nd-label">Total Users</span>
+                <span class="nd-icon" style="background:#eff6ff; color:#10b981;"><i class="fas fa-users"></i></span>
+            </div>
+            <p class="nd-value">{{ stats.total_users|default:0 }}</p>
+            <p class="nd-sub"><span class="nd-positive">+{{ stats.new_users_week|default:0 }}</span> this week</p>
+        </div>
+
+        <div class="nd-card">
+            <div class="nd-card-top">
+                <span class="nd-label">Pro Members</span>
+                <span class="nd-icon" style="background:#f0fdf4; color:#16a34a;"><i class="fas fa-crown"></i></span>
+            </div>
+            <p class="nd-value">{{ stats.pro_users|default:0 }}</p>
+            <p class="nd-sub">{{ stats.pro_percentage|default:0 }}% conversion rate</p>
+        </div>
+
+        <div class="nd-card">
+            <div class="nd-card-top">
+                <span class="nd-label">Revenue</span>
+                <span class="nd-icon" style="background:#fef3c7; color:#d97706;"><i class="fas fa-dollar-sign"></i></span>
+            </div>
+            <p class="nd-value">${{ stats.total_revenue|default:0|floatformat:2 }}</p>
+            <p class="nd-sub">{{ stats.total_transactions|default:0 }} transactions</p>
+        </div>
+
+        <div class="nd-card">
+            <div class="nd-card-top">
+                <span class="nd-label">Food Items</span>
+                <span class="nd-icon" style="background:#fce7f3; color:#db2777;"><i class="fas fa-utensils"></i></span>
+            </div>
+            <p class="nd-value">{{ stats.total_food_items|default:0 }}</p>
+            <p class="nd-sub">{{ stats.total_consumption_logs|default:0 }} logs recorded</p>
+        </div>
+    </div>
+
+    <div class="nd-grid nd-charts">
+        <div class="nd-card">
+            <h3 class="nd-panel-title"><i class="fas fa-chart-area" style="color:#10b981; margin-right:6px;"></i>User Registrations (Last 7 Days)</h3>
+            <div class="nd-chart-wrap">
+                <canvas id="registrationChart"></canvas>
+            </div>
+        </div>
+        <div class="nd-card">
+            <h3 class="nd-panel-title"><i class="fas fa-chart-pie" style="color:#8b5cf6; margin-right:6px;"></i>Meal Distribution</h3>
+            <div class="nd-chart-wrap">
+                <canvas id="mealChart"></canvas>
+            </div>
+        </div>
+        <div class="nd-card">
+            <h3 class="nd-panel-title"><i class="fas fa-chart-bar" style="color:#0ea5e9; margin-right:6px;"></i>Today Activity Mix</h3>
+            <div class="nd-chart-mini-wrap">
+                <canvas id="activityChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="nd-grid nd-lower">
+        <div class="nd-card">
+            <h3 class="nd-panel-title"><i class="fas fa-bolt" style="color:#f59e0b; margin-right:6px;"></i>Platform Activity (Today)</h3>
+            <div class="nd-activity-grid">
+                <div class="nd-activity-item">
+                    <p style="color:#10b981;">{{ stats.logs_today|default:0 }}</p>
+                    <p>Meals Logged</p>
+                </div>
+                <div class="nd-activity-item">
+                    <p style="color:#16a34a;">{{ stats.water_logs_today|default:0 }}</p>
+                    <p>Water Tracked</p>
+                </div>
+                <div class="nd-activity-item">
+                    <p style="color:#8b5cf6;">{{ stats.weight_logs_today|default:0 }}</p>
+                    <p>Weight Logged</p>
+                </div>
+                <div class="nd-activity-item">
+                    <p style="color:#f59e0b;">{{ stats.diet_plans_today|default:0 }}</p>
+                    <p>Diet Plans</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="nd-card">
+            <h3 class="nd-panel-title"><i class="fas fa-user-plus" style="color:#22c55e; margin-right:6px;"></i>Recent Registrations</h3>
+            <div class="nd-users">
+                {% for user in recent_users %}
+                {% firstof user.profile.name user.get_full_name user.username as display_name %}
+                <div class="nd-user-row">
+                    <div class="nd-user-avatar">{{ display_name|make_list|first|upper }}</div>
+                    <div class="nd-user-main">
+                        <p class="nd-user-name">{{ display_name }}</p>
+                        <p class="nd-user-email">{{ user.email|default:"No email" }}</p>
+                    </div>
+                    <span class="nd-user-time">{{ user.date_joined|timesince }} ago</span>
+                </div>
+                {% empty %}
+                <p class="nd-sub" style="margin: 4px 0; text-align:center;">No users yet</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div style="margin-top: 24px;">
+        <h2 style="font-size: 1rem; font-weight: 800; color: #1e293b; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px;">
+            <i class="fas fa-database" style="color: #64748b; margin-right: 8px;"></i>Database Management
+        </h2>
+        {% include "admin/app_list.html" %}
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script>
+    const registrationCanvas = document.getElementById('registrationChart');
+    const mealCanvas = document.getElementById('mealChart');
+    const activityCanvas = document.getElementById('activityChart');
+
+    const registrationLabels = {{ registration_labels|safe }};
+    const registrationData = {{ registration_data|safe }};
+    const mealData = {{ meal_data|safe }};
+    const todayActivityData = [
+        {{ stats.logs_today|default:0 }},
+        {{ stats.water_logs_today|default:0 }},
+        {{ stats.weight_logs_today|default:0 }},
+        {{ stats.diet_plans_today|default:0 }}
+    ];
+
+    if (registrationCanvas) {
+        const regCtx = registrationCanvas.getContext('2d');
+        new Chart(regCtx, {
+            type: 'line',
+            data: {
+                labels: registrationLabels,
+                datasets: [{
+                    label: 'New Users',
+                    data: registrationData,
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    borderWidth: 2.5,
+                    fill: true,
+                    tension: 0.35,
+                    pointBackgroundColor: '#10b981',
+                    pointRadius: 3,
+                    pointHoverRadius: 5,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1, color: '#64748b' },
+                        grid: { color: '#e2e8f0' }
+                    },
+                    x: {
+                        ticks: { color: '#64748b' },
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
+
+    if (mealCanvas) {
+        const mealCtx = mealCanvas.getContext('2d');
+        new Chart(mealCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Breakfast', 'Lunch', 'Dinner', 'Snack'],
+                datasets: [{
+                    data: mealData,
+                    backgroundColor: ['#3b82f6', '#22c55e', '#f59e0b', '#ec4899'],
+                    borderWidth: 0,
+                    hoverOffset: 6,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '62%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#475569',
+                            font: { size: 11, weight: '600' },
+                            usePointStyle: true,
+                            padding: 12,
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    if (activityCanvas) {
+        const activityCtx = activityCanvas.getContext('2d');
+        new Chart(activityCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Meals', 'Water', 'Weight', 'Plans'],
+                datasets: [{
+                    data: todayActivityData,
+                    backgroundColor: ['#10b981', '#16a34a', '#8b5cf6', '#f59e0b'],
+                    borderRadius: 8,
+                    borderSkipped: false,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1, color: '#64748b' },
+                        grid: { color: '#e2e8f0' }
+                    },
+                    x: {
+                        ticks: { color: '#64748b', font: { weight: '600' } },
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}
+
+

@@ -1,0 +1,36 @@
+﻿{% extends 'user_app/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-8">
+    <h2 class="text-2xl font-bold mb-6">AI Nutrition Coach</h2>
+    <div class="space-y-6">
+        <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-6">
+            <p class="text-slate-700">
+                Welcome to your AI Nutrition Coach! This feature provides personalized nutrition advice 
+                based on your profile and meal logs. Ask questions about your diet, get meal suggestions, 
+                or receive tips for reaching your health goals.
+            </p>
+        </div>
+        
+        <div id="coachChat" class="space-y-4 min-h-96 max-h-96 overflow-y-auto border border-slate-200 rounded-xl p-6">
+            <div class="bg-slate-50 rounded-lg p-4">
+                <p class="text-slate-700">Hello! I'm your AI Nutrition Coach. How can I help you today?</p>
+            </div>
+        </div>
+        
+        <div class="flex gap-4">
+            <input type="text" id="coachInput" placeholder="Ask me anything about nutrition..." class="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+            <button id="sendMessage" class="bg-emerald-500 hover:bg-emerald-700 text-white font-semibold px-6 py-3 rounded-lg transition-all">
+                Send
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/coach.js' %}"></script>
+{% endblock %}
+
+

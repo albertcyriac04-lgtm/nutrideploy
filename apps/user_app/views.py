@@ -34,7 +34,7 @@ def verified_user_redirect(request):
 
 def landing(request):
     """Landing page when user is logged out"""
-    return render(request, 'landing.html')
+    return render(request, 'user_app/landing.html')
 
 
 def index(request):
@@ -85,7 +85,7 @@ def index(request):
         'daily_meal_log': daily_meal_log,
         'food_items': food_items,
     }
-    return render(request, 'index.html', context)
+    return render(request, 'user_app/index.html', context)
 
 
 class UserRegistrationForm(UserCreationForm):
@@ -121,7 +121,7 @@ def login_view(request):
         else:
             messages.error(request, 'Invalid username or password.')
     
-    return render(request, 'login.html')
+    return render(request, 'user_app/login.html')
 
 
 def register_view(request):
@@ -149,7 +149,7 @@ def register_view(request):
     else:
         form = UserRegistrationForm()
     
-    return render(request, 'register.html', {'form': form})
+    return render(request, 'user_app/register.html', {'form': form})
 
 
 def logs_view(request):
@@ -173,7 +173,7 @@ def logs_view(request):
         'food_items': food_items,
         'stats': stats,
     }
-    return render(request, 'logs.html', context)
+    return render(request, 'user_app/logs.html', context)
 
 
 def coach_view(request):
@@ -195,7 +195,7 @@ def coach_view(request):
         'logs': logs,
         'food_items': food_items,
     }
-    return render(request, 'coach.html', context)
+    return render(request, 'user_app/coach.html', context)
 
 
 def settings_view(request):
@@ -263,7 +263,7 @@ def settings_view(request):
         'default_start_date': default_start_date.strftime('%Y-%m-%d'),
         'default_end_date': today.strftime('%Y-%m-%d'),
     }
-    return render(request, 'settings.html', context)
+    return render(request, 'user_app/settings.html', context)
 
 
 def calculate_dashboard_stats(profile):
@@ -378,7 +378,7 @@ def add_weight_record(request):
     except Exception as e:
         if request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', ''):
             return JsonResponse({'error': str(e)}, status=400)
-        return render(request, 'index.html', {'error': str(e)})
+        return render(request, 'user_app/index.html', {'error': str(e)})
 
 
 @require_http_methods(["POST"])
@@ -552,7 +552,7 @@ def get_diet_plan(request):
     # Get current logged meals
     meal_log = DailyMealLog.objects.filter(user_profile=profile, date=today).first()
         
-    return render(request, 'diet_plan.html', {
+    return render(request, 'user_app/diet_plan.html', {
         'plan': plan, 
         'profile': profile,
         'meal_log': meal_log
@@ -628,7 +628,7 @@ def billing_view(request):
     transactions = Transaction.objects.filter(user_profile=profile).order_by('-created_at')
     plans = SubscriptionPlan.objects.all()
     
-    return render(request, 'billing.html', {
+    return render(request, 'user_app/billing.html', {
         'profile': profile,
         'transactions': transactions,
         'plans': plans

@@ -1,0 +1,219 @@
+﻿{% extends 'user_app/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="bg-gradient-to-br from-green-600 to-emerald-700 rounded-3xl shadow-xl p-8 text-white mb-8">
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <h1 class="text-3xl font-bold mb-2">Today's Healthy Indian Diet</h1>
+                <p class="text-green-100 opacity-80">{{ plan.date|date:"F d, Y" }} â€¢ Personalized for {{
+                    profile.dietary_preference }}</p>
+            </div>
+            <div class="bg-white/20 p-4 rounded-2xl backdrop-blur-md">
+                <i class="fas fa-leaf text-3xl"></i>
+            </div>
+        </div>
+
+        <div class="bg-white/10 rounded-2xl p-6 backdrop-blur-md border border-white/10">
+            <h2 class="text-lg font-bold mb-2">AI Summary</h2>
+            <p class="text-sm leading-relaxed text-green-50 italic">{{ plan.summary }}</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <!-- Breakfast -->
+        <div
+            class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 hover:shadow-md transition-shadow relative group">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center">
+                        <i class="fas fa-sun text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800">Breakfast</h3>
+                </div>
+                <span class="text-xs font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded">{{ plan.breakfast_calories
+                    }} kcal</span>
+            </div>
+            <div class="text-slate-600 text-sm leading-relaxed whitespace-pre-line mb-4">
+                {{ plan.breakfast }}
+            </div>
+            {% if meal_log.breakfast_content %}
+            <button onclick="removeMeal('breakfast', this)"
+                class="w-full py-2 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2">
+                <i class="fas fa-trash-can"></i> Remove meal
+            </button>
+            {% else %}
+            <button onclick="logMeal('breakfast', this)"
+                class="w-full py-2 bg-slate-50 text-slate-600 hover:bg-green-600 hover:text-white rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2">
+                <i class="fas fa-check-circle"></i> Log this meal
+            </button>
+            {% endif %}
+        </div>
+
+        <!-- Lunch -->
+        <div
+            class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 hover:shadow-md transition-shadow relative group">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                        <i class="fas fa-cloud-sun text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800">Lunch</h3>
+                </div>
+                <span class="text-xs font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded">{{ plan.lunch_calories }}
+                    kcal</span>
+            </div>
+            <div class="text-slate-600 text-sm leading-relaxed whitespace-pre-line mb-4">
+                {{ plan.lunch }}
+            </div>
+            {% if meal_log.lunch_content %}
+            <button onclick="removeMeal('lunch', this)"
+                class="w-full py-2 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2">
+                <i class="fas fa-trash-can"></i> Remove meal
+            </button>
+            {% else %}
+            <button onclick="logMeal('lunch', this)"
+                class="w-full py-2 bg-slate-50 text-slate-600 hover:bg-green-600 hover:text-white rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2">
+                <i class="fas fa-check-circle"></i> Log this meal
+            </button>
+            {% endif %}
+        </div>
+
+        <!-- Snacks -->
+        <div
+            class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 hover:shadow-md transition-shadow relative group">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center">
+                        <i class="fas fa-apple-whole text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800">Snacks & Tea</h3>
+                </div>
+                <span class="text-xs font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded">{{ plan.snacks_calories }}
+                    kcal</span>
+            </div>
+            <div class="text-slate-600 text-sm leading-relaxed whitespace-pre-line mb-4">
+                {{ plan.snacks }}
+            </div>
+            {% if meal_log.snacks_content %}
+            <button onclick="removeMeal('snacks', this)"
+                class="w-full py-2 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2">
+                <i class="fas fa-trash-can"></i> Remove meal
+            </button>
+            {% else %}
+            <button onclick="logMeal('snacks', this)"
+                class="w-full py-2 bg-slate-50 text-slate-600 hover:bg-green-600 hover:text-white rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2">
+                <i class="fas fa-check-circle"></i> Log this meal
+            </button>
+            {% endif %}
+        </div>
+
+        <!-- Dinner -->
+        <div
+            class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 hover:shadow-md transition-shadow relative group">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                        <i class="fas fa-moon text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800">Dinner</h3>
+                </div>
+                <span class="text-xs font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded">{{ plan.dinner_calories }}
+                    kcal</span>
+            </div>
+            <div class="text-slate-600 text-sm leading-relaxed whitespace-pre-line mb-4">
+                {{ plan.dinner }}
+            </div>
+            {% if meal_log.dinner_content %}
+            <button onclick="removeMeal('dinner', this)"
+                class="w-full py-2 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2">
+                <i class="fas fa-trash-can"></i> Remove meal
+            </button>
+            {% else %}
+            <button onclick="logMeal('dinner', this)"
+                class="w-full py-2 bg-slate-50 text-slate-600 hover:bg-green-600 hover:text-white rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2">
+                <i class="fas fa-check-circle"></i> Log this meal
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        function logMeal(mealType, btn) {
+            const formData = new FormData();
+            formData.append('date', "{{ plan.date|date:'Y-m-d' }}");
+            formData.append('meal_type', mealType);
+
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging...';
+
+            fetch("{% url 'log_meal' %}", {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        btn.classList.remove('bg-slate-50', 'text-slate-600');
+                        btn.classList.add('bg-red-50', 'text-red-600');
+                        btn.innerHTML = '<i class="fas fa-trash-can"></i> Remove meal';
+                        btn.onclick = function () { removeMeal(mealType, btn); };
+                        btn.disabled = false;
+                    } else {
+                        alert(data.error || 'Failed to log meal');
+                        btn.disabled = false;
+                        btn.innerHTML = originalHtml;
+                    }
+                });
+        }
+
+        function removeMeal(mealType, btn) {
+            const formData = new FormData();
+            formData.append('date', "{{ plan.date|date:'Y-m-d' }}");
+            formData.append('meal_type', mealType);
+
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Removing...';
+
+            fetch("{% url 'remove_meal' %}", {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        btn.classList.remove('bg-red-50', 'text-red-600');
+                        btn.classList.add('bg-slate-50', 'text-slate-600');
+                        btn.innerHTML = '<i class="fas fa-check-circle"></i> Log this meal';
+                        btn.onclick = function () { logMeal(mealType, btn); };
+                        btn.disabled = false;
+                    } else {
+                        alert(data.error || 'Failed to remove meal');
+                        btn.disabled = false;
+                        btn.innerHTML = originalHtml;
+                    }
+                });
+        }
+    </script>
+</div>
+
+<div class="bg-slate-900 rounded-2xl p-8 text-center text-white">
+    <h3 class="text-xl font-bold mb-2">Need a different plan?</h3>
+    <p class="text-slate-400 text-sm mb-6">Our AI coach can generate custom plans based on your specific cravings or
+        grocery list.</p>
+    <a href="{% url 'coach' %}"
+        class="inline-block bg-white text-slate-900 px-8 py-3 rounded-xl font-bold hover:bg-slate-100 transition-colors">
+        Chat with AI Coach
+    </a>
+</div>
+</div>
+{% endblock %}

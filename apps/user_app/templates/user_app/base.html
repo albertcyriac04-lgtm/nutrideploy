@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}NutriDiet - Personalized Health & Nutrition{% endblock %}</title>
+    {% load static %}
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap');
+
+        :root {
+            --primary: #10b981;
+            --secondary: #0f172a;
+            --ai-accent: #818cf8;
+            --bg-slate: #f8fafc;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-slate);
+        }
+
+        h1, h2, h3, h4, .font-heading {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+
+        .hero-gradient-blob {
+            position: fixed;
+            width: 420px;
+            height: 420px;
+            background: radial-gradient(circle, rgba(16, 185, 129, 0.14) 0%, rgba(129, 140, 248, 0.08) 55%, rgba(255, 255, 255, 0) 72%);
+            z-index: -1;
+            filter: blur(30px);
+            pointer-events: none;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body class="text-slate-900 selection:bg-emerald-100 selection:text-emerald-900">
+    <div class="hero-gradient-blob -top-24 -right-24"></div>
+    <div class="hero-gradient-blob top-1/2 -left-40"></div>
+    <div class="flex min-h-screen">
+        {% if user.is_authenticated %}
+        {% include 'user_app/sidebar.html' %}
+        {% endif %}
+
+        <main
+            class="flex-1 p-4 md:p-8 {% if user.is_authenticated %}ml-0 md:ml-64{% endif %} transition-all overflow-y-auto">
+            {% if messages %}
+            <div class="mb-6 space-y-3">
+                {% for message in messages %}
+                <div
+                    class="px-5 py-3 rounded-2xl flex items-center gap-3 shadow-sm border animate-in fade-in slide-in-from-top-2 duration-300
+                    {% if message.tags == 'error' %}bg-red-50 border-red-100 text-red-800{% else %}bg-emerald-50 border-emerald-100 text-emerald-800{% endif %}">
+                    <i
+                        class="fas {% if message.tags == 'error' %}fa-circle-xmark{% else %}fa-circle-check{% endif %}"></i>
+                    <p class="text-sm font-medium">{{ message }}</p>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if user.is_authenticated %}
+
+            <header class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="flex items-center gap-4">
+                    {% if request.user.profile.profile_image_url %}
+                    <img src="{{ request.user.profile.profile_image_url }}" alt="Profile"
+                        class="w-14 h-14 rounded-full object-cover shadow-sm border-2 border-white">
+                    {% else %}
+                    {% firstof request.user.profile.name request.user.get_full_name request.user.username as display_name %}
+                    <div
+                        class="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-xl shadow-sm border-2 border-white">
+                        {{ display_name|make_list|first|upper }}
+                    </div>
+                    {% endif %}
+                    <div>
+                        {% firstof request.user.profile.name request.user.get_full_name request.user.username as display_name %}
+                        <h1 class="text-2xl font-bold text-slate-800">Welcome back, {{ display_name }}</h1>
+                        <p class="text-slate-500">Your personalized health journey continues.</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div
+                        class="bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-100 flex items-center gap-2">
+                        <span class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
+                        <span class="text-sm font-medium text-slate-600">Sync Active</span>
+                    </div>
+                </div>
+            </header>
+            {% else %}
+            <nav class="mb-8 flex justify-between items-center py-4">
+                <div class="flex items-center gap-2">
+                    <div
+                        class="bg-slate-900 text-white w-10 h-10 rounded-xl flex items-center justify-center shadow-lg shadow-slate-200">
+                        <i class="fas fa-gem text-lg"></i>
+                    </div>
+                    <span class="text-xl font-extrabold tracking-tight text-slate-800 font-heading">NutriDiet<span class="text-emerald-500">.</span></span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <a href="{% url 'login' %}"
+                        class="text-slate-600 hover:text-emerald-600 font-medium transition-colors">Sign In</a>
+                    <a href="{% url 'register' %}"
+                        class="bg-emerald-500 text-white px-6 py-2 rounded-xl font-medium shadow-lg shadow-emerald-200 hover:bg-emerald-600 transform hover:-translate-y-0.5 transition-all">Register</a>
+                </div>
+            </nav>
+            {% endif %}
+
+            <div class="max-w-7xl mx-auto">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <script src="{% load static %}{% static 'js/main.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+
+</html>
