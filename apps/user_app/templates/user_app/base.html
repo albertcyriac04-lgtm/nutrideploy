@@ -10,47 +10,128 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
         :root {
             --primary: #10b981;
+            --primary-glow: rgba(16, 185, 129, 0.4);
             --secondary: #0f172a;
-            --ai-accent: #818cf8;
-            --bg-slate: #f8fafc;
+            --ai-accent: #6366f1;
+            --bg-glass: rgba(255, 255, 255, 0.65);
+            --bg-fluid: #f0f4f8;
+            --iphone-radius: 28px;
         }
 
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-slate);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: radial-gradient(at 0% 0%, #f1f5f9 0, transparent 50%), 
+                        radial-gradient(at 50% 0%, #e2e8f0 0, transparent 50%), 
+                        radial-gradient(at 100% 0%, #f1f5f9 0, transparent 50%);
+            background-color: var(--bg-fluid);
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
         }
 
         h1, h2, h3, h4, .font-heading {
-            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+            letter-spacing: -0.03em;
         }
 
         .glass-card {
-            background: rgba(255, 255, 255, 0.6);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.4);
+            background: var(--bg-glass);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            border-radius: var(--iphone-radius);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.04);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .hero-gradient-blob {
+        .glass-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.08);
+            border-color: rgba(255, 255, 255, 1);
+        }
+
+        .iphone-panel {
+            background: rgba(255, 255, 255, 0.45);
+            backdrop-filter: blur(15px);
+            border-radius: var(--iphone-radius);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .mesh-gradient-bg {
             position: fixed;
-            width: 420px;
-            height: 420px;
-            background: radial-gradient(circle, rgba(16, 185, 129, 0.14) 0%, rgba(129, 140, 248, 0.08) 55%, rgba(255, 255, 255, 0) 72%);
-            z-index: -1;
-            filter: blur(30px);
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: -2;
+            background-color: #f1f5f9;
+            background-image: 
+                radial-gradient(at 40% 20%, hsla(168,72%,76%,1) 0, transparent 50%), 
+                radial-gradient(at 80% 0%, hsla(242,88%,79%,1) 0, transparent 50%), 
+                radial-gradient(at 0% 50%, hsla(334,80%,86%,1) 0, transparent 50%), 
+                radial-gradient(at 80% 50%, hsla(189,100%,82%,1) 0, transparent 50%), 
+                radial-gradient(at 0% 100%, hsla(22,100%,77%,1) 0, transparent 50%), 
+                radial-gradient(at 80% 100%, hsla(242,100%,70%,1) 0, transparent 50%), 
+                radial-gradient(at 0% 0%, hsla(343,100%,76%,1) 0, transparent 50%);
+            filter: blur(40px);
+            opacity: 0.15;
+            animation: meshMove 20s ease infinite alternate;
+        }
+
+        @keyframes meshMove {
+            0% { transform: scale(1) translate(0, 0); }
+            100% { transform: scale(1.1) translate(20px, 10px); }
+        }
+
+        .sidebar-glass {
+            background: rgba(255, 255, 255, 0.5) !important;
+            backdrop-filter: blur(25px) !important;
+            border-right: 1px solid rgba(255, 255, 255, 0.3) !important;
+        }
+
+        .sidebar-link-active {
+            background: rgba(16, 185, 129, 0.15) !important;
+            color: #059669 !important;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
+        }
+
+        .sidebar-link-hover {
+            transition: all 0.3s ease;
+        }
+        .sidebar-link-hover:hover {
+            background: rgba(255, 255, 255, 0.82);
+            transform: translateX(5px);
+        }
+        .liquid-blob {
+            position: fixed;
+            width: 500px;
+            height: 500px;
+            background: linear-gradient(45deg, rgba(16, 185, 129, 0.1), rgba(99, 102, 241, 0.15));
+            filter: blur(80px);
+            border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+            z-index: -3;
+            animation: liquidMove 15s ease-in-out infinite alternate, jiggle 8s ease-in-out infinite;
             pointer-events: none;
+        }
+
+        @keyframes liquidMove {
+            0% { transform: translate(-10%, -10%) rotate(0deg); }
+            100% { transform: translate(10%, 10%) rotate(15deg); }
+        }
+
+        @keyframes jiggle {
+            0%, 100% { border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; }
+            33% { border-radius: 60% 40% 30% 70% / 50% 60% 40% 50%; }
+            66% { border-radius: 30% 70% 50% 50% / 60% 40% 60% 40%; }
         }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
 
-<body class="text-slate-900 selection:bg-emerald-100 selection:text-emerald-900">
-    <div class="hero-gradient-blob -top-24 -right-24"></div>
-    <div class="hero-gradient-blob top-1/2 -left-40"></div>
+<body class="text-slate-900 selection:bg-emerald-100 selection:text-emerald-900 overflow-x-hidden">
+    <div class="mesh-gradient-bg"></div>
+    <div class="liquid-blob" style="top: -100px; left: -100px; background: rgba(16, 185, 129, 0.08);"></div>
+    <div class="liquid-blob" style="bottom: -100px; right: -100px; background: rgba(99, 102, 241, 0.08); animation-delay: -5s;"></div>
     <div class="flex min-h-screen">
         {% if user.is_authenticated %}
         {% include 'user_app/sidebar.html' %}

@@ -10,6 +10,13 @@ nutridiet_admin.register(User, UserAdmin)
 nutridiet_admin.register(Group, GroupAdmin)
 
 
+class BaseAdmin(admin.ModelAdmin):
+    class Media:
+        css = {
+            'all': ('css/admin_modern.css',)
+        }
+
+
 class UserProfileAdminForm(forms.ModelForm):
     food_allergies = forms.CharField(required=False, help_text="Comma-separated list (e.g., Peanuts, Dairy, Shellfish)")
     medical_conditions = forms.CharField(required=False, help_text="Comma-separated list (e.g., Diabetes, Hypertension)")
@@ -37,7 +44,7 @@ class UserProfileAdminForm(forms.ModelForm):
         return instance
 
 
-class UserProfileAdmin(admin.ModelAdmin):
+class UserProfileAdmin(BaseAdmin):
     form = UserProfileAdminForm
     list_display = [
         'display_user', 'name', 'age', 'gender', 'weight', 'target_weight',
@@ -80,7 +87,7 @@ class UserProfileAdmin(admin.ModelAdmin):
 nutridiet_admin.register(UserProfile, UserProfileAdmin)
 
 
-class FoodItemAdmin(admin.ModelAdmin):
+class FoodItemAdmin(BaseAdmin):
     list_display = ['name', 'calories', 'protein', 'carbs', 'fats', 'category']
     list_filter = ['category']
     search_fields = ['name']
@@ -89,7 +96,7 @@ class FoodItemAdmin(admin.ModelAdmin):
 nutridiet_admin.register(FoodItem, FoodItemAdmin)
 
 
-class ConsumptionLogAdmin(admin.ModelAdmin):
+class ConsumptionLogAdmin(BaseAdmin):
     list_display = ['user_profile', 'date', 'meal_type', 'food_item', 'quantity', 'total_calories', 'created_at']
     list_filter = ['meal_type', 'date', 'created_at']
     search_fields = ['user_profile__name', 'food_item__name']
@@ -102,7 +109,7 @@ class ConsumptionLogAdmin(admin.ModelAdmin):
 nutridiet_admin.register(ConsumptionLog, ConsumptionLogAdmin)
 
 
-class WeightRecordAdmin(admin.ModelAdmin):
+class WeightRecordAdmin(BaseAdmin):
     list_display = ['user_profile', 'date', 'weight', 'created_at']
     list_filter = ['date', 'created_at']
     search_fields = ['user_profile__name']
@@ -115,7 +122,7 @@ class WeightRecordAdmin(admin.ModelAdmin):
 nutridiet_admin.register(WeightRecord, WeightRecordAdmin)
 
 
-class WaterLogAdmin(admin.ModelAdmin):
+class WaterLogAdmin(BaseAdmin):
     list_display = ['user_profile', 'date', 'amount_glasses', 'target_glasses']
     list_filter = ['date']
     search_fields = ['user_profile__name', 'user_profile__user__username', 'user_profile__user__email']
@@ -127,7 +134,7 @@ class WaterLogAdmin(admin.ModelAdmin):
 nutridiet_admin.register(WaterLog, WaterLogAdmin)
 
 
-class DailyMealLogAdmin(admin.ModelAdmin):
+class DailyMealLogAdmin(BaseAdmin):
     list_display = ['user_profile', 'date', 'total_calories_consumed']
     list_filter = ['date']
     search_fields = ['user_profile__name', 'user_profile__user__username', 'user_profile__user__email']
@@ -139,15 +146,23 @@ class DailyMealLogAdmin(admin.ModelAdmin):
 nutridiet_admin.register(DailyMealLog, DailyMealLogAdmin)
 
 
-class SubscriptionPlanAdmin(admin.ModelAdmin):
-    list_display = ['name', 'amount', 'updated_at']
+class SubscriptionPlanAdmin(BaseAdmin):
+    list_display = ['name', 'amount', 'billing_cycle', 'is_popular', 'is_free', 'sort_order', 'updated_at']
+    list_editable = ['amount', 'sort_order', 'is_popular']
     search_fields = ['name', 'description']
-    ordering = ['name']
+    list_filter = ['billing_cycle', 'is_popular', 'is_free']
+    ordering = ['sort_order']
+    fieldsets = (
+        (None, {'fields': ('name', 'amount', 'billing_cycle', 'description')}),
+        ('Features', {'fields': ('features',), 'description': 'JSON list. Prefix with x: for unavailable.'}),
+        ('Display', {'fields': ('badge_label', 'accent_color', 'savings_text', 'is_popular', 'is_free', 'sort_order')}),
+        ('Subscription', {'fields': ('duration_days',)}),
+    )
 
 nutridiet_admin.register(SubscriptionPlan, SubscriptionPlanAdmin)
 
 
-class TransactionAdmin(admin.ModelAdmin):
+class TransactionAdmin(BaseAdmin):
     list_display = ['transaction_id', 'user_profile', 'plan_name', 'amount', 'payment_method', 'status', 'created_at']
     list_filter = ['status', 'payment_method', 'created_at']
     search_fields = ['transaction_id', 'user_profile__name']

@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import JsonResponse
 import json
 from django.views.decorators.csrf import csrf_exempt
@@ -9,6 +9,8 @@ from django.contrib.auth.decorators import login_required
 
 @login_required
 def diet_planner_page(request):    
+    if not request.user.profile.is_pro:
+        return redirect('billing')
     return render(request, "diet_planner.html", {"profile": request.user.profile})
 
 @csrf_exempt

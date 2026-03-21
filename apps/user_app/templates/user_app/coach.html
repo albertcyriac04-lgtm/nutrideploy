@@ -1,4 +1,4 @@
-﻿{% extends 'user_app/base.html' %}
+{% extends 'user_app/base.html' %}
 {% load static %}
 
 {% block content %}
@@ -8,8 +8,12 @@
         <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-6">
             <p class="text-slate-700">
                 Welcome to your AI Nutrition Coach! This feature provides personalized nutrition advice 
-                based on your profile and meal logs. Ask questions about your diet, get meal suggestions, 
-                or receive tips for reaching your health goals.
+                based on your profile and meal logs.
+                {% if not profile.is_pro %}
+                <span class="text-indigo-600 font-bold ml-1">
+                    <i class="fas fa-lock mr-1"></i> (Free plan: Basic advice. Upgrade to Pro for clinical-grade precision.)
+                </span>
+                {% endif %}
             </p>
         </div>
         

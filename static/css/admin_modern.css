@@ -1,0 +1,91 @@
+/* NutriDiet Modern Admin Styling (Clean & Tidy Edition) */
+:root {
+    --admin-primary: #10b981;
+    --admin-bg: #f8fafc;
+    --admin-border: #e2e8f0;
+    --admin-delete: #ef4444;
+}
+
+/* UNIVERSAL HIDE FOR ADD BUTTONS (Aggressive) */
+.addlink, .changelink, .add-link, a[href$="/add/"], a[class*="addlink"] {
+    display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+}
+
+/* Overall modern cleaning */
+#header { background: #10b981; color: #fff; padding: 15px 40px; }
+#branding h1 { font-weight: 800; letter-spacing: -1px; }
+div.breadcrumbs { background: #fff; border-bottom: 1px solid var(--admin-border); padding: 10px 40px; color: #64748b; font-size: 13px; }
+
+/* Modules & Boxes */
+.module { border-radius: 12px !important; border: 1px solid var(--admin-border) !important; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05) !important; margin-bottom: 24px !important; overflow: hidden; }
+.module h2, .module caption { 
+    background: #fcfcfc !important; 
+    color: #059669 !important; 
+    font-weight: 800 !important; 
+    text-transform: uppercase; 
+    letter-spacing: 0.1em; 
+    font-size: 11px !important; 
+    padding: 14px 20px !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    line-height: 1.5 !important;
+    text-align: left !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+}
+
+/* Sidebar Alignment System (Clean Navigation) */
+#nav-sidebar table, .sidebar table, .nav-sidebar table { width: 100% !important; margin: 0 !important; }
+#nav-sidebar tr, .sidebar tr, .nav-sidebar tr { display: flex !important; width: 100% !important; border-bottom: 1px solid #f1f5f9; align-items: center; }
+#nav-sidebar th, .sidebar th, .nav-sidebar th { flex: 1 !important; padding: 16px 20px !important; border: none !important; background: transparent !important; }
+#nav-sidebar td, .sidebar td, .nav-sidebar td { display: none !important; } /* AGGRESSIVE REMOVE ADD BUTTONS COLUMN */
+
+#nav-sidebar th a, .sidebar th a, .nav-sidebar th a { 
+    color: #475569 !important; 
+    font-weight: 600 !important; 
+    font-size: 13px !important; 
+    text-transform: none !important; 
+    letter-spacing: normal !important;
+    display: block !important;
+    text-align: left !important;
+}
+
+/* Tables */
+table { width: 100% !important; border-collapse: separate !important; border-spacing: 0 !important; }
+th, td { vertical-align: middle !important; }
+th { background: #f8fafc !important; border-bottom: 2px solid #f1f5f9 !important; color: #64748b !important; text-transform: uppercase; font-size: 11px !important; font-weight: 800 !important; padding: 15px 20px !important; text-align: left !important; }
+td { padding: 12px 20px !important; border-bottom: 1px solid #f1f5f9 !important; font-size: 13px !important; color: #334155 !important; }
+
+/* Button Modernizing - SHAPING DELETE BUTTONS */
+.button, input[type=submit], input[type=button], .submit-row a.deletelink {
+    border-radius: 10px !important;
+    font-weight: 700 !important;
+    padding: 10px 24px !important;
+    transition: all 0.2s ease !important;
+    text-transform: none !important;
+    border: none !important;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1) !important;
+}
+
+.default { background: var(--admin-primary) !important; }
+.default:hover { transform: translateY(-1px); box-shadow: 0 6px 15px rgba(16, 185, 129, 0.4) !important; }
+
+.submit-row a.deletelink, .deletelink {
+    background: #fee2e2 !important;
+    color: #ef4444 !important;
+    border: 1px solid #fecaca !important;
+    padding: 10px 24px !important;
+    border-radius: 10px !important;
+}
+.submit-row a.deletelink:hover { background: #ef4444 !important; color: #fff !important; }
+
+/* Responsive adjustments */
+@media (max-width: 767px) {
+    #header { padding: 15px; }
+    div.breadcrumbs { padding: 10px 15px; }
+}

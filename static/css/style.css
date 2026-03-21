@@ -1,60 +1,331 @@
-/* Custom styles for NutriDiet */
+/* ═══════════════════════════════════════════════════════════
+   NutriDiet — Global Design System
+   Typography · Animations · Micro-interactions · Polish
+   ═══════════════════════════════════════════════════════════ */
 
-.sidebar-link {
-    transition: all 0.2s ease;
+/* ── TYPOGRAPHY ── */
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    letter-spacing: -0.01em;
+    line-height: 1.6;
 }
 
-.sidebar-link:hover {
-    transform: translateX(4px);
+h1, h2, h3, h4, h5, h6,
+.font-heading {
+    font-family: 'Plus Jakarta Sans', 'Inter', sans-serif !important;
+    letter-spacing: -0.025em;
+    line-height: 1.2;
 }
 
-@keyframes pulse {
-    0%, 100% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.5;
-    }
+p, span, label, td, th, li, a, button, input, select, textarea, div {
+    font-family: inherit;
 }
 
-.animate-pulse {
-    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-/* Smooth transitions */
+/* ── SMOOTH BASE TRANSITIONS ── */
 * {
     transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 150ms;
+    transition-duration: 180ms;
 }
 
-/* Custom scrollbar */
+/* ── GLOBAL CARD HOVER — every white card ── */
+.bg-white {
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+                box-shadow 0.28s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+.bg-white:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* ── SIDEBAR ── */
+.sidebar-link {
+    transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+    position: relative;
+}
+.sidebar-link:hover {
+    transform: translateX(5px);
+}
+.sidebar-link::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%) scaleY(0);
+    width: 3px;
+    height: 60%;
+    background: #10b981;
+    border-radius: 0 3px 3px 0;
+    transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.sidebar-link:hover::after,
+.sidebar-link.bg-emerald-50::after {
+    transform: translateY(-50%) scaleY(1);
+}
+
+/* ── BUTTON MICRO-INTERACTIONS ── */
+button, .btn, [type="submit"], a[class*="bg-emerald"], a[class*="bg-indigo"], a[class*="bg-white"] {
+    position: relative;
+    overflow: hidden;
+}
+button:active, .btn:active, [type="submit"]:active {
+    transform: scale(0.97) !important;
+}
+
+/* Ripple-like subtle press */
+button::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, rgba(255,255,255,0.15), transparent 65%);
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+}
+button:active::after {
+    opacity: 1;
+}
+
+/* ── KEYFRAME ANIMATIONS ── */
+
+/* Fluid jiggle — organic micro-wobble */
+@keyframes nd-jiggle {
+    0%   { transform: translate(0, 0) rotate(0deg); }
+    20%  { transform: translate(-0.5px, 0.7px) rotate(-0.25deg); }
+    40%  { transform: translate(0.7px, -0.3px) rotate(0.15deg); }
+    60%  { transform: translate(-0.3px, 0.5px) rotate(-0.1deg); }
+    80%  { transform: translate(0.4px, -0.25px) rotate(0.08deg); }
+    100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+/* Gentle float — breathing movement */
+@keyframes nd-float {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-3px); }
+}
+
+/* Slide-up entrance */
+@keyframes nd-slideUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Fade in */
+@keyframes nd-fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+/* Scale entrance */
+@keyframes nd-scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+/* Subtle pulse glow */
+@keyframes nd-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.12); }
+    50%      { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+}
+
+/* Progress bar shimmer */
+@keyframes nd-shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.animate-pulse {
+    animation: nd-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ── ANIMATION UTILITY CLASSES ── */
+.nd-jiggle:hover {
+    animation: nd-jiggle 0.4s ease;
+}
+.nd-float {
+    animation: nd-float 3s ease-in-out infinite;
+}
+.nd-slide {
+    animation: nd-slideUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.nd-fade {
+    animation: nd-fadeIn 0.35s ease both;
+}
+.nd-scale {
+    animation: nd-scaleIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ── GLOBAL ENTRANCE ANIMATION FOR ALL MAIN CONTENT ── */
+main > div > * {
+    animation: nd-slideUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Staggered delays for sequential entrance */
+main > div > *:nth-child(1) { animation-delay: 0.03s; }
+main > div > *:nth-child(2) { animation-delay: 0.08s; }
+main > div > *:nth-child(3) { animation-delay: 0.13s; }
+main > div > *:nth-child(4) { animation-delay: 0.18s; }
+main > div > *:nth-child(5) { animation-delay: 0.23s; }
+main > div > *:nth-child(6) { animation-delay: 0.28s; }
+main > div > *:nth-child(7) { animation-delay: 0.33s; }
+main > div > *:nth-child(8) { animation-delay: 0.38s; }
+
+/* Cards within grids also animate */
+.grid > div,
+.space-y-4 > div,
+.space-y-6 > div {
+    animation: nd-slideUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.grid > div:nth-child(1) { animation-delay: 0.05s; }
+.grid > div:nth-child(2) { animation-delay: 0.1s; }
+.grid > div:nth-child(3) { animation-delay: 0.15s; }
+.grid > div:nth-child(4) { animation-delay: 0.2s; }
+
+/* ── PROGRESS BARS ── */
+[class*="bg-emerald"][class*="rounded-full"][class*="h-2"],
+[class*="bg-green"][class*="rounded-full"][class*="h-2"],
+[class*="bg-yellow"][class*="rounded-full"][class*="h-2"],
+[class*="bg-indigo"][class*="rounded-full"][class*="h-2"] {
+    background-size: 200% 100%;
+    background-image: linear-gradient(90deg, currentColor 0%, rgba(255,255,255,0.25) 50%, currentColor 100%);
+    animation: nd-shimmer 2.5s infinite linear;
+}
+
+/* ── ICONS — subtle float on stat cards ── */
+.fas, .far, .fab, .bi {
+    transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.bg-white:hover .fas,
+.bg-white:hover .far,
+.bg-white:hover .fab,
+.bg-white:hover .bi {
+    transform: scale(1.12);
+}
+
+/* ── INPUTS ── */
+input, select, textarea {
+    font-family: 'Inter', sans-serif !important;
+    transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s !important;
+}
+input:focus, select:focus, textarea:focus {
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
+    border-color: #10b981 !important;
+}
+
+/* ── MODALS ── */
+[class*="fixed"][class*="inset-0"][class*="backdrop-blur"],
+[class*="fixed"][class*="inset-0"][class*="bg-slate-900"] {
+    animation: nd-fadeIn 0.2s ease;
+}
+[class*="fixed"][class*="inset-0"] > [class*="bg-white"] {
+    animation: nd-scaleIn 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── TABLES ── */
+table tr {
+    transition: background-color 0.15s ease;
+}
+tbody tr:hover {
+    background-color: rgba(248, 250, 252, 0.7) !important;
+}
+
+/* ── BADGE / PILL HOVER ── */
+[class*="rounded-full"][class*="px-"] {
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+[class*="rounded-full"][class*="px-"]:hover {
+    transform: scale(1.03);
+}
+
+/* ── GRADIENT CARDS (diet plan, ML insights) ── */
+[class*="bg-gradient-to"] {
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.28s !important;
+}
+[class*="bg-gradient-to"]:hover {
+    transform: translateY(-3px) !important;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* ── SCROLLBAR ── */
 ::-webkit-scrollbar {
-    width: 8px;
+    width: 7px;
+    height: 7px;
 }
-
 ::-webkit-scrollbar-track {
-    background: #f1f5f9;
+    background: #f8fafc;
 }
-
 ::-webkit-scrollbar-thumb {
     background: #cbd5e1;
-    border-radius: 4px;
+    border-radius: 10px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
 }
 
-/* Mobile responsive adjustments */
+/* ── SELECTION ── */
+::selection {
+    background: #a7f3d0;
+    color: #065f46;
+}
+
+/* ── FOCUS RING ── */
+:focus-visible {
+    outline: 2px solid #10b981;
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+/* ── MOBILE SIDEBAR ── */
 @media (max-width: 768px) {
     .sidebar {
         transform: translateX(-100%);
-        transition: transform 0.3s ease;
+        transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
     }
-    
     .sidebar.open {
         transform: translateX(0);
     }
 }
 
+/* ── MEAL LOG ROWS — subtle left accent on hover ── */
+[class*="bg-slate-50"][class*="rounded-xl"]:hover {
+    border-left: 3px solid #10b981;
+    padding-left: calc(1rem - 3px);
+}
+
+/* ── CHART BARS ── */
+[class*="bg-emerald-100"][class*="rounded-t"] {
+    transition: height 0.8s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.2s;
+}
+[class*="bg-emerald-100"][class*="rounded-t"]:hover {
+    background-color: #a7f3d0 !important;
+}
+
+/* ── LINK UNDERLINE EFFECT ── */
+a[class*="text-emerald"]:not([class*="bg-"]) {
+    position: relative;
+}
+a[class*="text-emerald"]:not([class*="bg-"])::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 0;
+    height: 1.5px;
+    background: currentColor;
+    transition: width 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+a[class*="text-emerald"]:not([class*="bg-"]):hover::after {
+    width: 100%;
+}
+
+/* ── REDUCE MOTION for accessibility ── */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

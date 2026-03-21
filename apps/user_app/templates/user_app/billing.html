@@ -1,283 +1,608 @@
-﻿{% extends 'user_app/base.html' %}
+{% extends 'user_app/base.html' %}
 {% load static %}
 
-{% block content %}
-<div class="max-w-4xl mx-auto space-y-8 pb-12">
-    <!-- Subscription Status Overview -->
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        <div class="p-8 flex flex-col md:flex-row items-center justify-between gap-6">
-            <div class="flex items-center gap-6">
-                <div
-                    class="w-20 h-20 rounded-3xl {% if profile.is_pro %}bg-emerald-500 rotate-12 shadow-emerald-200{% else %}bg-slate-100{% endif %} flex items-center justify-center text-white shadow-lg transition-transform hover:rotate-0">
-                    <i class="fas fa-crown text-3xl {% if not profile.is_pro %}text-slate-400{% endif %}"></i>
-                </div>
-                <div>
-                    <h2 class="text-3xl font-black text-slate-800">{{ profile.subscription_status }} Membership</h2>
-                    {% if profile.is_pro %}
-                    <p class="text-emerald-500 font-bold flex items-center gap-2">
-                        <i class="fas fa-check-circle"></i>
-                        Active until {{ profile.subscription_expires|date:"F d, Y" }}
-                    </p>
-                    {% else %}
-                    <p class="text-slate-400 font-medium whitespace-nowrap">Upgrade to access AI-powered health
-                        analytics.</p>
-                    {% endif %}
-                </div>
-            </div>
-            {% if not profile.is_pro %}
-            <button onclick="document.getElementById('paymentModal').classList.remove('hidden')"
-                class="px-8 py-4 bg-emerald-500 hover:bg-emerald-700 text-white font-black rounded-2xl transition-all shadow-xl shadow-emerald-100 transform hover:-translate-y-1">
-                Upgrade to Pro
-            </button>
-            {% else %}
-            <div class="flex flex-col items-center gap-3">
-                <div
-                    class="bg-emerald-50 text-emerald-700 px-6 py-3 rounded-2xl border border-emerald-100 font-bold text-sm text-center">
-                    Active until {{ profile.subscription_expires|date:"M d, Y" }}
-                </div>
-                <button onclick="document.getElementById('paymentModal').classList.remove('hidden')"
-                    class="w-full px-4 py-2 bg-slate-800 hover:bg-black text-white text-xs font-black rounded-xl transition-all">
-                    Extend / Renew Plan
-                </button>
-            </div>
-            {% endif %}
-        </div>
-    </div>
+{% block title %}NutriDiet — Billing{% endblock %}
 
-    <!-- Transaction History (Billing Panel) -->
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        <div class="p-6 border-b border-slate-50">
-            <h3 class="text-xl font-bold text-slate-800">Transaction History</h3>
-            <p class="text-xs text-slate-500">View and manage your previous bills</p>
-        </div>
-        <div class="overflow-x-auto">
-            <table class="w-full text-left">
-                <thead>
-                    <tr class="bg-slate-50/50">
-                        <th class="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Transaction ID
-                        </th>
-                        <th class="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Date</th>
-                        <th class="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Method</th>
-                        <th class="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Amount</th>
-                        <th class="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Status</th>
-                        <th class="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">
-                            Action</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-50">
-                    {% for txn in transactions %}
-                    <tr class="hover:bg-slate-50/30 transition-colors">
-                        <td class="px-6 py-4">
-                            <span class="text-sm font-mono font-bold text-slate-700">{{ txn.transaction_id }}</span>
-                        </td>
-                        <td class="px-6 py-4">
-                            <span class="text-xs text-slate-500">{{ txn.created_at|date:"M d, Y" }}</span>
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="flex items-center gap-2">
-                                <i
-                                    class="fas {% if txn.payment_method == 'UPI' %}fa-qrcode text-indigo-500{% elif txn.payment_method == 'Card' %}fa-credit-card text-emerald-500{% else %}fa-building-columns text-orange-500{% endif %}"></i>
-                                <span class="text-xs font-semibold text-slate-600">{{ txn.payment_method }}</span>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4">
-                            <span class="text-sm font-black text-slate-800">${{ txn.amount }}</span>
-                        </td>
-                        <td class="px-6 py-4">
-                            <span
-                                class="px-3 py-1 rounded-full text-[10px] font-black uppercase
-                                {% if txn.status == 'Success' %}bg-emerald-50 text-emerald-600{% elif txn.status == 'Failed' %}bg-red-50 text-red-600{% else %}bg-slate-100 text-slate-500{% endif %}">
-                                {{ txn.status }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 text-right">
-                            {% if txn.status == 'Success' %}
-                            <a href="{% url 'download_invoice' txn.transaction_id %}" target="_blank"
-                                class="text-xs text-emerald-600 hover:text-emerald-800 font-bold flex items-center gap-1 justify-end">
-                                <i class="fas fa-download"></i> Invoice
-                            </a>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="6" class="px-6 py-12 text-center">
-                            <div class="flex flex-col items-center gap-3">
-                                <div
-                                    class="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-300">
-                                    <i class="fas fa-receipt text-xl"></i>
-                                </div>
-                                <p class="text-sm text-slate-400 italic">No transactions found yet.</p>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<style>
+/* ╔═══════════════════════════════════════════════════════════╗
+   ║  BILLING PAGE — matches NutriDiet light theme            ║
+   ║  bg: #f8fafc, cards: white, accent: emerald-500          ║
+   ╚═══════════════════════════════════════════════════════════╝ */
 
-<!-- Dummy Payment Modal -->
-<div id="paymentModal"
-    class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-    <div
-        class="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in duration-200">
-        <div class="bg-slate-900 p-8 text-white relative">
-            <button onclick="document.getElementById('paymentModal').classList.add('hidden')"
-                class="absolute top-6 right-6 text-white/50 hover:text-white">
-                <i class="fas fa-times"></i>
-            </button>
-            <h2 class="text-2xl font-black mb-2">Upgrade to Pro</h2>
-            <p class="text-slate-400 text-sm">Select your preferred payment method</p>
-        </div>
+/* ── FLUID JIGGLE micro-animation ── */
+@keyframes jiggle {
+  0%   { transform: translate(0,0) rotate(0deg); }
+  20%  { transform: translate(-0.6px, 0.8px) rotate(-0.3deg); }
+  40%  { transform: translate(0.8px, -0.4px) rotate(0.2deg); }
+  60%  { transform: translate(-0.4px, 0.6px) rotate(-0.15deg); }
+  80%  { transform: translate(0.5px, -0.3px) rotate(0.1deg); }
+  100% { transform: translate(0,0) rotate(0deg); }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes gentlePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,.15); }
+  50%      { box-shadow: 0 0 0 8px rgba(16,185,129,0); }
+}
 
-        <div class="p-8 space-y-6">
-            <div class="space-y-4">
-                {% for plan in plans %}
-                <label
-                    class="relative flex items-center justify-between p-6 border-2 rounded-2xl cursor-pointer transition-all hover:bg-emerald-50/50 group {% if forloop.first %}border-emerald-600 bg-emerald-50/50{% else %}border-slate-100 bg-white{% endif %}"
-                    onclick="selectPlan('{{ plan.id }}', this)">
-                    <input type="radio" name="plan_selection" value="{{ plan.id }}" class="hidden" {% if forloop.first %}checked{% endif %}>
-                    <div class="flex-1">
-                        <div class="flex items-center gap-2">
-                            <h4 class="font-black text-slate-800 text-lg">{{ plan.name }}</h4>
-                            <div
-                                class="w-2 h-2 rounded-full bg-emerald-500 opacity-0 group-[.border-emerald-600]:opacity-100">
-                            </div>
-                        </div>
-                        <p class="text-slate-500 text-xs">{{ plan.description }}</p>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-3xl font-black text-emerald-600">${{ plan.amount }}</p>
-                        <p class="text-[10px] font-bold text-emerald-400 uppercase">Monthly</p>
-                    </div>
-                </label>
-                {% endfor %}
-                <input type="hidden" id="selected_plan_id" value="{{ plans.0.id }}">
-            </div>
+.anim-jiggle:hover { animation: jiggle .4s ease; }
+.anim-float { animation: float 3s ease-in-out infinite; }
+.anim-slide { animation: slideUp .45s cubic-bezier(.22,1,.36,1) both; }
+.anim-pulse { animation: gentlePulse 2s infinite; }
 
-            <div class="space-y-3">
-                <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Payment
-                    Method</label>
+/* staggered entrance */
+.stagger-1 { animation-delay: .05s; }
+.stagger-2 { animation-delay: .12s; }
+.stagger-3 { animation-delay: .19s; }
+.stagger-4 { animation-delay: .26s; }
+.stagger-5 { animation-delay: .33s; }
 
-                <label
-                    class="relative flex items-center gap-4 p-4 border border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-50 transition-all select-none group">
-                    <input type="radio" name="payment_method" value="UPI" checked class="hidden peer">
-                    <div
-                        class="w-6 h-6 rounded-full border-2 border-slate-200 peer-checked:border-emerald-600 peer-checked:bg-emerald-500 flex items-center justify-center text-white text-xs">
-                        <i class="fas fa-check opacity-0 peer-checked:opacity-100"></i>
-                    </div>
-                    <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                        <i class="fas fa-qrcode"></i>
-                    </div>
-                    <div>
-                        <p class="font-bold text-slate-800">UPI</p>
-                        <p class="text-[10px] text-slate-400">Google Pay, PhonePe, Paytm</p>
-                    </div>
-                </label>
+/* ── PLAN CARDS ── */
+.plan-card {
+  background: white !important;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 1.1rem;
+  padding: 1.8rem;
+  transition: transform .25s cubic-bezier(.22,1,.36,1), box-shadow .25s, border-color .25s;
+  position: relative;
+  overflow: visible;
+}
+.plan-card:hover {
+  transform: translateY(-5px) scale(1.005);
+  box-shadow: 0 16px 48px rgba(0,0,0,.07);
+}
+.plan-card.popular {
+  border: 2.5px solid #10b981 !important;
+  box-shadow: 0 0 0 4px rgba(16,185,129,.08), 0 20px 50px rgba(16,185,129,.1);
+}
+.plan-card.popular:hover {
+  transform: translateY(-5px) scale(1.015);
+  box-shadow: 0 0 0 4px rgba(16,185,129,.12), 0 24px 56px rgba(16,185,129,.14);
+}
+.popular-ribbon {
+  position: absolute; top: -13px; left: 50%; transform: translateX(-50%);
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white; font-size: .68rem; font-weight: 700;
+  padding: 4px 16px; border-radius: 20px;
+  letter-spacing: .04em;
+  box-shadow: 0 4px 12px rgba(16,185,129,.25);
+}
+.price-tag {
+  font-size: 2.6rem; font-weight: 800; line-height: 1.1;
+  letter-spacing: -.02em;
+}
+.feat { font-size: .87rem; margin-bottom: .45rem; display: flex; align-items: center; gap: .45rem; }
+.feat i { font-size: .7rem; }
+.feat.off { color: #94a3b8; }
+.feat.off span { text-decoration: line-through; }
 
-                <label
-                    class="relative flex items-center gap-4 p-4 border border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-50 transition-all select-none group">
-                    <input type="radio" name="payment_method" value="Card" class="hidden peer">
-                    <div
-                        class="w-6 h-6 rounded-full border-2 border-slate-200 peer-checked:border-emerald-600 peer-checked:bg-emerald-500 flex items-center justify-center text-white text-xs">
-                        <i class="fas fa-check opacity-0 peer-checked:opacity-100"></i>
-                    </div>
-                    <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                        <i class="fas fa-credit-card"></i>
-                    </div>
-                    <div>
-                        <p class="font-bold text-slate-800">Credit / Debit Card</p>
-                        <p class="text-[10px] text-slate-400">Visa, Mastercard, RuPay</p>
-                    </div>
-                </label>
+/* ── BUTTONS ── */
+.btn-primary-nd {
+  display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white; font-weight: 700; border: none;
+  border-radius: .7rem; padding: .75rem 1.5rem;
+  cursor: pointer; width: 100%; font-size: .9rem;
+  transition: transform .2s, box-shadow .2s;
+  box-shadow: 0 4px 14px rgba(16,185,129,.2);
+}
+.btn-primary-nd:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(16,185,129,.3);
+}
+.btn-primary-nd:disabled { opacity:.4; cursor:not-allowed; transform:none; box-shadow:none; }
+.btn-ghost {
+  background: transparent; border: 1.5px solid #e2e8f0;
+  color: #64748b; border-radius: .7rem; padding: .6rem 1.2rem;
+  cursor: pointer; font-size: .85rem; font-weight: 600;
+  transition: all .2s;
+}
+.btn-ghost:hover { border-color: #10b981; color: #10b981; }
+.btn-teal-nd {
+  display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
+  background: linear-gradient(135deg, #2dd4bf, #0d9488);
+  color: white; font-weight: 700; border: none;
+  border-radius: .7rem; padding: .75rem 1.5rem;
+  cursor: pointer; width: 100%; font-size: .9rem;
+  transition: transform .2s, box-shadow .2s;
+  box-shadow: 0 4px 14px rgba(45,212,191,.2);
+}
+.btn-teal-nd:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(45,212,191,.3); }
 
-                <label
-                    class="relative flex items-center gap-4 p-4 border border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-50 transition-all select-none group">
-                    <input type="radio" name="payment_method" value="Net Banking" class="hidden peer">
-                    <div
-                        class="w-6 h-6 rounded-full border-2 border-slate-200 peer-checked:border-emerald-600 peer-checked:bg-emerald-500 flex items-center justify-center text-white text-xs">
-                        <i class="fas fa-check opacity-0 peer-checked:opacity-100"></i>
-                    </div>
-                    <div class="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center">
-                        <i class="fas fa-building-columns"></i>
-                    </div>
-                    <div>
-                        <p class="font-bold text-slate-800">Net Banking</p>
-                        <p class="text-[10px] text-slate-400">All major Indian banks supportes</p>
-                    </div>
-                </label>
-            </div>
+/* ── TRUST BAR ── */
+.trust-pill {
+  background: white; border: 1px solid #e2e8f0; border-radius: .55rem;
+  padding: .4rem .85rem; font-size: .76rem; color: #64748b;
+  display: inline-flex; align-items: center; gap: .3rem;
+  transition: transform .15s;
+}
+.trust-pill:hover { transform: scale(1.04); }
 
-            <button onclick="processDummyPayment()" id="payBtn"
-                class="w-full bg-slate-900 hover:bg-black text-white font-black py-4 rounded-2xl transition-all flex items-center justify-center gap-3">
-                <i class="fas fa-lock text-sm opacity-50"></i>
-                Secure Pay Now
-            </button>
-        </div>
-    </div>
-</div>
+/* ── TXN TABLE ── */
+.txn-card { background: white; border-radius: 1rem; border: 1px solid #e2e8f0; overflow: hidden; }
+.txn-card table { width: 100%; border-collapse: collapse; }
+.txn-card th {
+  font-size: .68rem; text-transform: uppercase; letter-spacing: .08em;
+  color: #94a3b8; padding: .7rem 1.1rem; text-align: left;
+  background: #fafbfc; border-bottom: 1px solid #e2e8f0;
+}
+.txn-card td { padding: .7rem 1.1rem; font-size: .87rem; color: #334155; border-bottom: 1px solid #f1f5f9; }
+.txn-card tr:last-child td { border-bottom: none; }
+.txn-card tr:hover td { background: #f8fafc; }
+.pill-status { font-size: .66rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+.pill-status.ok { background: #ecfdf5; color: #059669; }
+.pill-status.fail { background: #fef2f2; color: #dc2626; }
+.pill-status.pend { background: #fffbeb; color: #d97706; }
 
-<script>
-    function selectPlan(planId, element) {
-        // Clear all labels
-        document.querySelectorAll('label[onclick^="selectPlan"]').forEach(lbl => {
-            lbl.classList.remove('border-emerald-600', 'bg-emerald-50/50');
-            lbl.classList.add('border-slate-100', 'bg-white');
-        });
-        // Select clicked
-        element.classList.remove('border-slate-100', 'bg-white');
-        element.classList.add('border-emerald-600', 'bg-emerald-50/50');
-        // Update hidden
-        document.getElementById('selected_plan_id').value = planId;
-    }
-</script>
+/* ═══ CHECKOUT OVERLAY ═══ */
+#checkoutOverlay {
+  display:none; position:fixed; inset:0; z-index:1055;
+  background: rgba(15,23,42,.45); backdrop-filter: blur(10px);
+  overflow-y:auto; padding:2rem 1rem;
+}
+#checkoutOverlay.show { display:block; animation: fdIn .2s ease; }
+@keyframes fdIn { from{opacity:0} to{opacity:1} }
+#checkoutBox {
+  background: white; border: 1px solid #e2e8f0;
+  border-radius: 1.2rem; max-width: 900px; margin: auto;
+  box-shadow: 0 32px 80px rgba(0,0,0,.12);
+  animation: modalPop .35s cubic-bezier(.22,1,.36,1);
+}
+@keyframes modalPop { from{opacity:0;transform:scale(.96) translateY(12px)} to{opacity:1;transform:scale(1) translateY(0)} }
 
-<script>
-    function processDummyPayment() {
-        const payBtn = document.getElementById('payBtn');
-        const planId = document.getElementById('selected_plan_id').value;
-        const paymentMethod = document.querySelector('input[name="payment_method"]:checked').value;
+/* ── INPUTS ── */
+.nd-inp {
+  background: #f8fafc; border: 1.5px solid #e2e8f0; color: #0f172a;
+  border-radius: .6rem; padding: .65rem .9rem; width: 100%;
+  font-family: 'Inter', sans-serif; font-size: .87rem;
+  outline: none; transition: border-color .2s, box-shadow .2s;
+}
+.nd-inp:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,.1); background: white; }
+.nd-inp::placeholder { color: #94a3b8; }
+.nd-inp.bad { border-color: #ef4444; }
+.nd-inp.ok  { border-color: #10b981; }
+.e-msg { color: #ef4444; font-size: .74rem; display:none; margin-top:2px; }
 
-        payBtn.disabled = true;
-        payBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+/* ── PAYMENT TABS ── */
+.pay-tabs { display:flex; gap:0; background: #f1f5f9; border-radius: .55rem; padding: 3px; margin-bottom: 0; }
+.pay-tab {
+  flex:1; background:none; border:none; color:#64748b;
+  padding:.5rem .6rem; font-size:.78rem; font-weight:600;
+  cursor:pointer; border-radius:.4rem; transition: all .18s;
+  text-align: center;
+}
+.pay-tab:hover { color:#334155; }
+.pay-tab.on { background:white; color:#10b981; box-shadow:0 1px 3px rgba(0,0,0,.08); font-weight:700; }
+.pay-pane { display:none; padding:1.2rem; background:white; border:1px solid #e2e8f0; border-radius:0 0 .7rem .7rem; margin-top: -1px; }
+.pay-pane.on { display:block; }
 
-        fetch("{% url 'process_payment' %}", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}'
-            },
-            body: JSON.stringify({
-                plan_id: planId,
-                payment_method: paymentMethod
-            })
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Show success state
-                    payBtn.classList.remove('bg-slate-900');
-                    payBtn.classList.add('bg-emerald-600');
-                    payBtn.innerHTML = '<i class="fas fa-check"></i> Payment Successful!';
+/* ── 3D CARD ── */
+.card-stage { width:280px; height:172px; perspective:1000px; margin:0 auto .8rem; }
+@media(max-width:640px) { .card-stage { width:100%; aspect-ratio:85.6/53.98; height:auto; } }
+.card-3d { width:100%; height:100%; transform-style:preserve-3d; transition:transform .5s cubic-bezier(.4,0,.2,1); position:relative; }
+.card-3d.flip { transform:rotateY(180deg); }
+.cface { position:absolute; inset:0; border-radius:13px; backface-visibility:hidden; padding:1.1rem 1.3rem; display:flex; flex-direction:column; justify-content:space-between; }
+.cface.front { background:linear-gradient(145deg,#0f172a 0%,#1e293b 100%); box-shadow:0 8px 28px rgba(0,0,0,.18); }
+.cface.back  { background:linear-gradient(145deg,#1e293b,#334155); transform:rotateY(180deg); }
+.cchip { width:32px; height:22px; background:linear-gradient(135deg,#d4af37,#f5e276); border-radius:3px; }
+.cnum { font-size:1rem; letter-spacing:.2em; color:rgba(255,255,255,.85); }
+.clbl { font-size:.55rem; color:rgba(255,255,255,.4); text-transform:uppercase; letter-spacing:.1em; }
+.cval { font-size:.78rem; font-weight:600; color:white; }
+.cstripe { background:rgba(0,0,0,.55); height:36px; margin:0 -1.3rem; }
+.ccvv { background:#eee; border-radius:3px; padding:.2rem .5rem; text-align:right; color:#111; font-family:monospace; font-size:.85rem; }
+.inp-wrap { position:relative; }
+.ct-tag { position:absolute; right:9px; top:50%; transform:translateY(-50%); font-size:.68rem; font-weight:700; padding:1px 6px; border-radius:3px; background:#e2e8f0; color:#64748b; }
 
-                    setTimeout(() => {
-                        location.reload();
-                    }, 1500);
-                } else {
-                    alert(data.error || 'Payment failed. Please try again.');
-                    payBtn.disabled = false;
-                    payBtn.innerHTML = '<i class="fas fa-lock text-sm opacity-50"></i> Secure Pay Now';
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred during payment.');
-                payBtn.disabled = false;
-                payBtn.innerHTML = '<i class="fas fa-lock text-sm opacity-50"></i> Secure Pay Now';
-            });
-    }
-</script>
+/* ── SUMMARY ── */
+.srow { display:flex; justify-content:space-between; font-size:.87rem; margin-bottom:.3rem; color:#334155; }
+.srow.tot { font-size:1.15rem; font-weight:800; color:#059669; }
+.sdiv { border-top:1px solid #f1f5f9; margin:.6rem 0; }
+
+/* ── WALLET ── */
+.wopt { border:1.5px solid #e2e8f0; border-radius:.6rem; padding:.55rem 1rem; margin-bottom:.35rem; cursor:pointer; display:flex; align-items:center; gap:.6rem; transition:border-color .15s; }
+.wopt:hover,.wopt.on { border-color:#10b981; }
+.wopt input { accent-color:#10b981; }
+
+/* ── OVERLAYS ── */
+#procOverlay { display:none; position:fixed; inset:0; z-index:2000; background:rgba(248,250,252,.95); flex-direction:column; align-items:center; justify-content:center; gap:.7rem; }
+#procOverlay.show { display:flex; }
+.spin-ring { width:44px; height:44px; border:3.5px solid #e2e8f0; border-top-color:#10b981; border-radius:50%; animation:spin .85s linear infinite; }
+@keyframes spin { to{transform:rotate(360deg)} }
+
+.ok-ring { width:72px; height:72px; border-radius:50%; border:4px solid #10b981; display:flex; align-items:center; justify-content:center; margin:0 auto .7rem; animation: popIn .4s cubic-bezier(.34,1.56,.64,1); }
+@keyframes popIn { from{transform:scale(0);opacity:0} to{transform:scale(1);opacity:1} }
+.ok-path { stroke:#10b981; stroke-width:4; fill:none; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:68; stroke-dashoffset:68; animation:drawOk .5s .2s ease forwards; }
+@keyframes drawOk { to{stroke-dashoffset:0} }
+.fail-ring { width:72px; height:72px; border-radius:50%; border:4px solid #ef4444; display:flex; align-items:center; justify-content:center; margin:0 auto .7rem; animation:popIn .4s cubic-bezier(.34,1.56,.64,1); }
+
+/* ── CONFETTI ── */
+.cpiece { position:fixed; top:-20px; animation:cfall 3s ease-out forwards; opacity:0; pointer-events:none; }
+@keyframes cfall { 0%{opacity:1;transform:translateY(0) rotate(0) translateX(0)} 100%{opacity:0;transform:translateY(100vh) rotate(720deg) translateX(var(--tx))} }
+
+.coupon-ok { color:#059669; font-size:.78rem; }
+.coupon-bad { color:#ef4444; font-size:.78rem; }
+</style>
 {% endblock %}
 
+{% block content %}
+<div class="space-y-6 pb-10">
+
+  <!-- ══ SUBSCRIPTION STATUS ══ -->
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col md:flex-row items-center justify-between gap-4 anim-slide anim-jiggle">
+    <div class="flex items-center gap-4">
+      <div class="w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm {% if profile.is_pro %}bg-emerald-50 text-emerald-500{% else %}bg-slate-50 text-slate-300{% endif %} anim-float">
+        <i class="fas fa-crown text-2xl"></i>
+      </div>
+      <div>
+        <h2 class="text-2xl font-extrabold text-slate-800 font-heading">{{ profile.subscription_status }} Membership</h2>
+        {% if profile.is_pro %}
+        <p class="text-emerald-600 font-semibold text-sm flex items-center gap-1">
+          <i class="fas fa-check-circle"></i> Active until {{ profile.subscription_expires|date:"F d, Y" }}
+        </p>
+        {% else %}
+        <p class="text-slate-400 text-sm">Upgrade to unlock AI-powered health analytics</p>
+        {% endif %}
+      </div>
+    </div>
+    {% if not profile.is_pro %}
+    <button onclick="openCheckout('premium',299,'Monthly')"
+      class="btn-primary-nd anim-pulse" style="width:auto;padding:.75rem 2rem;">
+      <i class="fas fa-bolt"></i> Upgrade to Pro
+    </button>
+    {% else %}
+    <button onclick="openCheckout('premium',299,'Monthly')"
+      class="btn-ghost" style="width:auto;">
+      <i class="fas fa-redo text-xs me-1"></i> Extend / Renew
+    </button>
+    {% endif %}
+  </div>
+
+  <!-- ══ PLAN CARDS ══ -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-5" style="align-items:stretch;">
+    {% for plan in plans %}
+    <div class="plan-card {% if plan.is_popular %}popular{% endif %} flex flex-col anim-slide stagger-{{ forloop.counter }} anim-jiggle"
+         style="{% if plan.accent_color == 'teal' %}border-color:#99f6e4;{% endif %}">
+      {% if plan.is_popular %}<div class="popular-ribbon">⭐ Most Popular</div>{% endif %}
+      <div class="mb-3">
+        <span class="inline-block text-[10px] font-bold bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full uppercase tracking-wider">{{ plan.badge_label|default:plan.name }}</span>
+      </div>
+      <div class="price-tag text-emerald-600 mb-1">
+        ₹{{ plan.amount|floatformat:0 }}<span class="text-sm font-medium text-slate-400 ml-1">/{% if plan.billing_cycle == 'annual' %}yr{% else %}mo{% endif %}</span>
+      </div>
+      <p class="text-slate-400 text-sm mb-5">{{ plan.description|default:"Unlock your full potential" }}</p>
+      <div class="flex-1 space-y-1">
+        {% for feature in plan.features %}
+          {% if feature|slice:":2" == "x:" %}
+          <div class="feat off"><i class="fas fa-xmark text-slate-300"></i> <span>{{ feature|slice:"2:" }}</span></div>
+          {% else %}
+          <div class="feat"><i class="fas fa-check text-emerald-500"></i> <span>{{ feature }}</span></div>
+          {% endif %}
+        {% endfor %}
+      </div>
+      
+      {% if plan.is_free %}
+        <button class="btn-ghost mt-5 w-full" disabled style="opacity:.5;">Current Plan</button>
+      {% elif profile.is_pro and profile.subscription_status == plan.name %}
+        <button class="btn-ghost mt-5 w-full" disabled style="opacity:.5;">Active Plan</button>
+      {% else %}
+        <button class="{% if plan.accent_color == 'teal' %}btn-teal-nd{% else %}btn-primary-nd{% endif %} mt-5" 
+                onclick="openCheckout({{ plan.id }}, {{ plan.amount }}, '{% if plan.billing_cycle == 'annual' %}Annual{% else %}Monthly{% endif %}', '{{ plan.name }}', '{{ plan.badge_label|default:"PREMIUM" }}')">
+          <i class="fas {% if plan.billing_cycle == 'annual' %}fa-gem{% else %}fa-rocket{% endif %}"></i> Upgrade to {{ plan.name }}
+        </button>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- TRUST BAR -->
+  <div class="flex flex-wrap gap-2 anim-slide stagger-4">
+    <div class="trust-pill anim-jiggle">🔒 256-bit SSL</div>
+    <div class="trust-pill anim-jiggle">✅ Secure Checkout</div>
+    <div class="trust-pill anim-jiggle">↩️ 7-day Refund</div>
+    <div class="trust-pill anim-jiggle">🏆 10k+ Happy Users</div>
+  </div>
+
+  <!-- ══ TRANSACTION HISTORY ══ -->
+  <div class="txn-card anim-slide stagger-5">
+    <div class="p-5 border-b border-slate-100">
+      <h3 class="text-lg font-bold text-slate-800 font-heading">Transaction History</h3>
+      <p class="text-xs text-slate-400 mt-0.5">All your past payments and invoices</p>
+    </div>
+    <div class="overflow-x-auto">
+      <table>
+        <thead>
+          <tr>
+            <th>Transaction ID</th><th>Date</th><th>Method</th>
+            <th>Amount</th><th>Status</th><th style="text-align:right;">Invoice</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for txn in transactions %}
+          <tr class="anim-jiggle">
+            <td><span style="font-family:monospace;color:#059669;font-weight:600;font-size:.82rem;">{{ txn.transaction_id }}</span></td>
+            <td class="text-slate-400 text-sm">{{ txn.created_at|date:"M d, Y" }}</td>
+            <td>
+              <i class="fas {% if txn.payment_method == 'UPI' %}fa-qrcode text-indigo-500{% elif txn.payment_method == 'Card' %}fa-credit-card text-emerald-500{% else %}fa-building-columns text-orange-500{% endif %} me-1 text-xs"></i>
+              {{ txn.payment_method }}
+            </td>
+            <td class="font-bold text-slate-700">₹{{ txn.amount }}</td>
+            <td><span class="pill-status {% if txn.status == 'Success' %}ok{% elif txn.status == 'Failed' %}fail{% else %}pend{% endif %}">{{ txn.status }}</span></td>
+            <td style="text-align:right;">
+              {% if txn.status == 'Success' %}
+              <a href="{% url 'download_invoice' txn.transaction_id %}" target="_blank"
+                 class="text-emerald-600 hover:text-emerald-800 text-xs font-semibold">
+                <i class="fas fa-download me-1"></i>Invoice
+              </a>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="text-center py-12">
+              <div class="flex flex-col items-center gap-2">
+                <div class="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-200 anim-float">
+                  <i class="fas fa-receipt text-2xl"></i>
+                </div>
+                <p class="text-sm text-slate-400">No transactions yet</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     CHECKOUT OVERLAY
+     ═══════════════════════════════════════════ -->
+<div id="checkoutOverlay">
+  <div style="max-width:900px;margin:auto;">
+    <div id="checkoutBox">
+
+      <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+        <span class="font-extrabold text-slate-800 font-heading text-lg">Secure Checkout</span>
+        <button onclick="closeCO()" class="btn-ghost" style="width:auto;padding:.3rem .7rem;border-radius:.5rem;"><i class="fas fa-times text-sm"></i></button>
+      </div>
+
+      <!-- FORM -->
+      <div id="co-form" class="p-5">
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
+
+          <div class="md:col-span-7 space-y-4">
+            <!-- Contact -->
+            <div class="bg-slate-50/80 rounded-xl border border-slate-100 p-4">
+              <h4 class="text-sm font-bold text-slate-700 mb-3 font-heading">Contact Information</h4>
+              <div class="space-y-2">
+                <div>
+                  <input id="f-name" class="nd-inp" placeholder="Full Name" oninput="lv('f-name')">
+                  <div class="e-msg" id="e-name">Enter your name</div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <div>
+                    <input id="f-email" type="email" class="nd-inp" placeholder="Email" oninput="lv('f-email')">
+                    <div class="e-msg" id="e-email">Enter valid email</div>
+                  </div>
+                  <input id="f-phone" type="tel" class="nd-inp" placeholder="Phone (optional)">
+                </div>
+              </div>
+            </div>
+
+            <!-- Payment -->
+            <div class="bg-slate-50/80 rounded-xl border border-slate-100 p-4">
+              <h4 class="text-sm font-bold text-slate-700 mb-3 font-heading">Payment Method</h4>
+              <div class="pay-tabs">
+                <button class="pay-tab on" onclick="sw('t-card',this)">💳 Card</button>
+                <button class="pay-tab" onclick="sw('t-upi',this)">📲 UPI</button>
+                <button class="pay-tab" onclick="sw('t-nb',this)">🏦 Bank</button>
+                <button class="pay-tab" onclick="sw('t-wall',this)">👛 Wallet</button>
+              </div>
+
+              <!-- CARD -->
+              <div id="t-card" class="pay-pane on">
+                <div class="card-stage anim-jiggle">
+                  <div class="card-3d" id="cardFlip">
+                    <div class="cface front">
+                      <div class="flex justify-between items-center"><div class="cchip"></div><div id="pNet" style="color:#10b981;font-weight:700;font-size:.85rem;">VISA</div></div>
+                      <div class="cnum" id="pNum">•••• •••• •••• ••••</div>
+                      <div class="flex justify-between items-end">
+                        <div><div class="clbl">Holder</div><div class="cval" id="pName">YOUR NAME</div></div>
+                        <div><div class="clbl">Expires</div><div class="cval" id="pExp">MM/YY</div></div>
+                      </div>
+                    </div>
+                    <div class="cface back flex flex-col justify-end">
+                      <div class="cstripe mb-2"></div>
+                      <div class="px-2"><div class="clbl mb-1">CVV</div><div class="ccvv" id="pCvv">•••</div></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="space-y-2">
+                  <div class="inp-wrap">
+                    <input id="f-card" class="nd-inp" placeholder="Card Number" maxlength="19" oninput="fmtC(this)" onfocus="fl(0)">
+                    <span class="ct-tag" id="ctag">—</span>
+                    <div class="e-msg" id="e-card">Invalid card number</div>
+                  </div>
+                  <input id="f-cname" class="nd-inp" placeholder="Cardholder Name" onfocus="fl(0)" oninput="$id('pName').textContent=this.value.toUpperCase()||'YOUR NAME'">
+                  <div class="grid grid-cols-2 gap-2">
+                    <div>
+                      <input id="f-exp" class="nd-inp" placeholder="MM/YY" maxlength="5" onfocus="fl(0)" oninput="fmtE(this)">
+                      <div class="e-msg" id="e-exp">Invalid expiry</div>
+                    </div>
+                    <div>
+                      <input id="f-cvv" class="nd-inp" placeholder="CVV" maxlength="4" type="tel" onfocus="fl(1)" onblur="fl(0)" oninput="$id('pCvv').textContent=this.value?'•'.repeat(this.value.length):'•••'">
+                      <div class="e-msg" id="e-cvv">Enter CVV</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- UPI -->
+              <div id="t-upi" class="pay-pane">
+                <div class="flex mb-2">
+                  <input id="f-upi" class="nd-inp" placeholder="yourname@upi" style="border-radius:.6rem 0 0 .6rem;border-right:none;">
+                  <button id="upiBtn" onclick="vUPI()" class="px-4 bg-emerald-500 text-white text-sm font-semibold border-none cursor-pointer" style="border-radius:0 .6rem .6rem 0;">Verify</button>
+                </div>
+                <div class="flex gap-2 mb-2">
+                  <span class="text-xs font-semibold bg-slate-100 text-slate-500 px-3 py-1 rounded-md">GPay</span>
+                  <span class="text-xs font-semibold bg-slate-100 text-slate-500 px-3 py-1 rounded-md">PhonePe</span>
+                  <span class="text-xs font-semibold bg-slate-100 text-slate-500 px-3 py-1 rounded-md">Paytm</span>
+                </div>
+                <div class="flex items-center justify-center rounded-lg text-slate-300 text-sm" style="border:2px dashed #e2e8f0;height:70px;">QR Placeholder</div>
+              </div>
+
+              <!-- NET BANKING -->
+              <div id="t-nb" class="pay-pane">
+                <select id="f-bank" class="nd-inp"><option value="">— Select Your Bank —</option><option>SBI</option><option>HDFC Bank</option><option>ICICI Bank</option><option>Axis Bank</option><option>Kotak Mahindra</option><option>Others</option></select>
+                <div class="e-msg" id="e-bank">Choose a bank</div>
+                <p class="text-slate-400 text-xs mt-2"><i class="fas fa-shield-halved text-emerald-500 me-1"></i>Redirect to your bank's portal</p>
+              </div>
+
+              <!-- WALLET -->
+              <div id="t-wall" class="pay-pane">
+                <label class="wopt" onclick="sW(this)"><input type="radio" name="w" value="paytm"> Paytm <span class="ml-auto text-slate-400 text-xs">₹250</span></label>
+                <label class="wopt" onclick="sW(this)"><input type="radio" name="w" value="amazon"> Amazon Pay <span class="ml-auto text-slate-400 text-xs">₹100</span></label>
+                <label class="wopt" onclick="sW(this)"><input type="radio" name="w" value="mobikwik"> Mobikwik <span class="ml-auto text-slate-400 text-xs">₹0</span></label>
+                <label class="wopt" onclick="sW(this)"><input type="radio" name="w" value="freecharge"> Freecharge <span class="ml-auto text-slate-400 text-xs">₹50</span></label>
+              </div>
+            </div>
+
+            <button id="payBtn" class="btn-primary-nd" onclick="pay()">
+              <i class="fas fa-lock text-xs opacity-70"></i> Pay <span id="payAmt">₹352.82</span>
+            </button>
+            <p class="text-center text-slate-300 text-xs mt-1"><i class="fas fa-shield-halved text-emerald-400"></i> 256-bit SSL · <a href="#" class="text-slate-300 hover:text-red-400" onclick="forceFail();return false;">Simulate Failure</a></p>
+          </div>
+
+          <!-- ORDER SUMMARY -->
+          <div class="md:col-span-5">
+            <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-4" style="position:sticky;top:10px;">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="font-bold text-emerald-600 text-sm font-heading">🌿 NutriDiet</span>
+                <span class="ml-auto text-[10px] font-bold bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full" id="sBadge">PREMIUM</span>
+              </div>
+              <div class="font-bold text-slate-800 font-heading" id="sPlan">Premium Plan</div>
+              <div class="text-slate-400 text-xs mb-3" id="sCycle">Billed Monthly</div>
+              <div class="sdiv"></div>
+              <div class="srow"><span>Subtotal</span><span id="sSub">₹299.00</span></div>
+              <div class="srow"><span>GST (18%)</span><span id="sGst">₹53.82</span></div>
+              <div class="srow" id="sDiscR" style="display:none;"><span class="text-emerald-600">Discount</span><span id="sDisc" class="text-emerald-600">-₹0</span></div>
+              <div class="sdiv"></div>
+              <div class="srow tot"><span>Total</span><span id="sTot">₹352.82</span></div>
+              <div class="mt-3">
+                <div class="flex">
+                  <input id="cInp" class="nd-inp text-xs" style="border-radius:.5rem 0 0 .5rem;" placeholder="Coupon Code" oninput="this.value=this.value.toUpperCase()">
+                  <button onclick="applyC()" class="px-3 bg-emerald-500 text-white text-xs font-bold border-none cursor-pointer whitespace-nowrap" style="border-radius:0 .5rem .5rem 0;">Apply</button>
+                </div>
+                <div id="cMsg" class="mt-1"></div>
+              </div>
+              <div class="sdiv"></div>
+              <div class="text-slate-400 text-xs space-y-1">
+                <div>✅ Instant activation</div>
+                <div>✅ Cancel anytime</div>
+                <div>✅ 7-day money back</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUCCESS -->
+      <div id="co-ok" style="display:none;" class="p-6 text-center">
+        <div class="ok-ring"><svg viewBox="0 0 52 52" width="38" height="38"><polyline class="ok-path" points="14,26 22,34 38,18"/></svg></div>
+        <h4 class="text-xl font-extrabold text-slate-800 font-heading mb-1">Payment Successful! 🎉</h4>
+        <p class="text-emerald-600 font-semibold text-sm">Welcome to NutriDiet Premium</p>
+        <div class="bg-slate-50 rounded-xl border border-slate-100 p-4 my-4 text-left">
+          <div class="srow"><span class="text-slate-400 text-sm">Transaction</span><span id="rTxn" class="font-mono text-emerald-600 text-sm"></span></div>
+          <div class="srow"><span class="text-slate-400 text-sm">Plan</span><span id="rPlan" class="text-sm"></span></div>
+          <div class="srow"><span class="text-slate-400 text-sm">Amount</span><span id="rAmt" class="font-bold text-sm"></span></div>
+          <div class="srow"><span class="text-slate-400 text-sm">Date</span><span id="rDate" class="text-sm"></span></div>
+        </div>
+        <div class="flex gap-3">
+          <button class="btn-primary-nd flex-1" onclick="location.reload()">Go to Dashboard</button>
+          <button class="btn-ghost flex-1" onclick="window.print()">⬇ Receipt</button>
+        </div>
+      </div>
+
+      <!-- FAIL -->
+      <div id="co-fail" style="display:none;" class="p-6 text-center">
+        <div class="fail-ring"><i class="fas fa-times text-2xl text-red-500"></i></div>
+        <h4 class="text-xl font-extrabold text-red-500 font-heading mb-1">Payment Failed</h4>
+        <p class="text-slate-400 text-sm mb-2">No amount was deducted</p>
+        <span class="inline-block text-[10px] font-bold bg-red-50 text-red-500 px-3 py-1 rounded-full mb-3">ERR_PAYMENT_DECLINED</span>
+        <div class="flex gap-3">
+          <button class="btn-primary-nd flex-1" onclick="rstForm()">Try Again</button>
+          <button class="btn-ghost flex-1" onclick="rstForm();sw('t-upi',null)">Other Method</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div id="procOverlay"><div class="spin-ring mb-3"></div><h5 class="text-lg font-bold text-slate-700 font-heading">Processing…</h5><p class="text-slate-400 text-sm">Don't close this window</p></div>
+<div id="confBox"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const $id=id=>document.getElementById(id);
+let P={id:1,name:'Premium Plan',price:299,cycle:'Monthly',badge:'PREMIUM'},cpn=null,ff=false;
+const CSRF='{{ csrf_token }}',CC={'NUTRI10':{d:10,l:'10% off'},'DIET20':{d:20,l:'20% off'},'HEALTH50':{d:50,l:'50% off!'}};
+
+/* ── Audio ── */
+function sndOk(){try{const a=new(window.AudioContext||window.webkitAudioContext)();[523.25,659.25,783.99,1046.5].forEach((f,i)=>{const o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0,a.currentTime+i*.12);g.gain.linearRampToValueAtTime(.2,a.currentTime+i*.12+.02);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+i*.12+.35);o.connect(g);g.connect(a.destination);o.start(a.currentTime+i*.12);o.stop(a.currentTime+i*.12+.4);});}catch(e){}}
+function sndFail(){try{const a=new(window.AudioContext||window.webkitAudioContext)();[330,220].forEach((f,i)=>{const o=a.createOscillator(),g=a.createGain();o.type='sawtooth';o.frequency.value=f;g.gain.setValueAtTime(0,a.currentTime+i*.18);g.gain.linearRampToValueAtTime(.16,a.currentTime+i*.18+.02);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+i*.18+.3);o.connect(g);g.connect(a.destination);o.start(a.currentTime+i*.18);o.stop(a.currentTime+i*.18+.35);});}catch(e){}}
+
+/* ── Checkout ── */
+function openCheckout(id,pr,cy,name,badge){P={id:id,price:pr,cycle:cy,name:name,badge:badge};cpn=null;$id('cInp').value='';$id('cMsg').innerHTML='';$id('sDiscR').style.display='none';updS();rstForm();$id('checkoutOverlay').classList.add('show');document.body.style.overflow='hidden';}
+function closeCO(){$id('checkoutOverlay').classList.remove('show');document.body.style.overflow='';}
+
+function updS(){const d=cpn?(P.price*cpn.d/100):0,a=P.price-d,g=a*.18,t=a+g;$id('sPlan').textContent=P.name;$id('sCycle').textContent='Billed '+P.cycle;$id('sBadge').textContent=P.badge;$id('sSub').textContent='₹'+P.price.toFixed(2);$id('sGst').textContent='₹'+g.toFixed(2);$id('sTot').textContent='₹'+t.toFixed(2);$id('payAmt').textContent='₹'+t.toFixed(2);if(cpn){$id('sDisc').textContent='-₹'+d.toFixed(2);$id('sDiscR').style.display='';}}
+
+function applyC(){const c=$id('cInp').value.trim().toUpperCase(),m=$id('cMsg');if(CC[c]){cpn=CC[c];m.innerHTML=`<span class="coupon-ok">✅ ${cpn.l} <a href="#" onclick="rmC();return false" class="text-red-400 text-xs ml-1">Remove</a></span>`;updS();}else{m.innerHTML='<span class="coupon-bad">❌ Invalid code</span>';}}
+function rmC(){cpn=null;$id('cInp').value='';$id('cMsg').innerHTML='';$id('sDiscR').style.display='none';updS();}
+
+/* ── Tabs ── */
+function sw(id,btn){document.querySelectorAll('.pay-pane').forEach(p=>p.classList.remove('on'));document.querySelectorAll('.pay-tab').forEach(t=>t.classList.remove('on'));$id(id).classList.add('on');if(btn)btn.classList.add('on');}
+
+/* ── Card format ── */
+function fmtC(el){let v=el.value.replace(/\D/g,'');const t=det(v);v=v.slice(0,t==='AMEX'?15:16);el.value=v.replace(/(\d{4})(?=\d)/g,'$1 ').trim();$id('pNum').textContent=el.value||'•••• •••• •••• ••••';$id('pNet').textContent=t||'VISA';$id('ctag').textContent=t||'—';}
+function fmtE(el){let v=el.value.replace(/\D/g,'');if(v.length>2)v=v.slice(0,2)+'/'+v.slice(2,4);el.value=v;$id('pExp').textContent=v||'MM/YY';}
+function det(n){if(/^4/.test(n))return'VISA';if(/^5[1-5]/.test(n))return'MC';if(/^6/.test(n))return'RuPay';if(/^37/.test(n))return'AMEX';return'';}
+function fl(b){$id('cardFlip').classList.toggle('flip',!!b);}
+
+function vUPI(){const u=$id('f-upi').value.trim(),b=$id('upiBtn');if(!u.includes('@')){alert('Enter valid UPI');return;}b.disabled=true;b.textContent='Verifying…';setTimeout(()=>{b.textContent='✅ Verified';b.style.background='#ecfdf5';b.style.color='#059669';},1200);}
+function sW(el){document.querySelectorAll('.wopt').forEach(o=>o.classList.remove('on'));el.classList.add('on');}
+
+/* ── Validate ── */
+function lv(id){const el=$id(id);let ok=true;if(id==='f-name')ok=el.value.trim().length>1;if(id==='f-email')ok=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(el.value);if(id==='f-card')ok=el.value.replace(/\s/g,'').length>=15;if(id==='f-exp'){const p=el.value.split('/');if(p.length===2){const m=+p[0],y=+('20'+p[1]),n=new Date();ok=m>=1&&m<=12&&(y>n.getFullYear()||(y===n.getFullYear()&&m>=n.getMonth()+1));}else ok=false;}el.classList.toggle('bad',!ok);el.classList.toggle('ok',ok);const e=$id('e-'+id.replace('f-',''));if(e)e.style.display=ok?'none':'block';}
+function aTab(){const a=document.querySelector('.pay-tab.on');if(!a)return't-card';const o=a.getAttribute('onclick')||'';const m=o.match(/t-\w+/);return m?m[0]:'t-card';}
+function vAll(){let ok=true;['f-name','f-email'].forEach(i=>{lv(i);if($id(i).classList.contains('bad'))ok=false;});const t=aTab();if(t==='t-card'){['f-card','f-exp'].forEach(i=>{lv(i);if($id(i).classList.contains('bad'))ok=false;});const c=$id('f-cvv');if(c.value.length<3){c.classList.add('bad');$id('e-cvv').style.display='block';ok=false;}}if(t==='t-nb'){const b=$id('f-bank');if(!b.value){b.classList.add('bad');$id('e-bank').style.display='block';ok=false;}}return ok;}
+
+/* ── Payment ── */
+function pay(){if(!vAll())return;run();}
+function forceFail(){if(!vAll())return;ff=true;run();}
+function run(){
+  $id('procOverlay').classList.add('show');
+  const m=aTab()==='t-card'?'Card':aTab()==='t-upi'?'UPI':aTab()==='t-nb'?'Net Banking':'Wallet';
+  fetch('/api/process-payment/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},body:JSON.stringify({plan_id:P.id,payment_method:m})})
+  .then(r=>r.json()).then(d=>{setTimeout(()=>{$id('procOverlay').classList.remove('show');if(ff){ff=false;fail();return;}d.success?ok(d.transaction_id||null):fail();},2400);})
+  .catch(()=>{setTimeout(()=>{$id('procOverlay').classList.remove('show');if(ff||Math.random()<.1){ff=false;fail();}else ok(null);},2400);});
+}
+function ok(txn){sndOk();const id=txn||'#ND'+Math.random().toString().slice(2,10),t=$id('sTot').textContent,ds=new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});$id('rTxn').textContent=id;$id('rPlan').textContent=P.name;$id('rAmt').textContent=t;$id('rDate').textContent=ds;$id('co-form').style.display='none';$id('co-ok').style.display='block';$id('co-fail').style.display='none';confetti();}
+function fail(){sndFail();$id('co-form').style.display='none';$id('co-ok').style.display='none';$id('co-fail').style.display='block';}
+function rstForm(){$id('co-form').style.display='block';$id('co-ok').style.display='none';$id('co-fail').style.display='none';}
+
+function confetti(){const c=['#10b981','#2dd4bf','#f59e0b','#60a5fa','#f472b6','#a78bfa'],b=$id('confBox');for(let i=0;i<50;i++){const p=document.createElement('div');p.className='cpiece';p.style.cssText=`left:${Math.random()*100}vw;background:${c[Math.floor(Math.random()*c.length)]};width:${5+Math.random()*7}px;height:${8+Math.random()*7}px;border-radius:${Math.random()>.5?'50%':'2px'};animation-duration:${2+Math.random()*2}s;animation-delay:${Math.random()*.5}s;--tx:${Math.random()*180-90}px;`;b.appendChild(p);p.addEventListener('animationend',()=>p.remove());}}
+
+updS();
+</script>
+{% endblock %}

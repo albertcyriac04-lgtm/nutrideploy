@@ -93,13 +93,23 @@ def build_grouped_activity(profile, limit=None):
     return [{'date': d, 'meals': grouped[d]} for d in sorted_dates]
 
 def verified_user_redirect(request):
-    """Helper to ensure user is authenticated. Redirects to landing if not logged in."""
+    """
+    Helper to ensure user is authenticated. 
+    Redirects to landing if not logged in.
+    Redirects admins to the admin panel directly.
+    """
     if not request.user.is_authenticated:
         return redirect('landing')
+    if request.user.is_staff:
+        return redirect('/admin/')
     return None
 
 def landing(request):
-    """Landing page when user is logged out"""
+    """Landing page or direct portal for logged-in users"""
+    if request.user.is_authenticated:
+        if request.user.is_staff:
+            return redirect('/admin/')
+        return redirect('index')
     return render(request, 'user_app/landing.html')
 
 def index(request):
@@ -221,8 +231,14 @@ def full_report_view(request):
     """Detailed current status report page"""
     redirect_res = verified_user_redirect(request)
     if redirect_res: return redirect_res
-    try: profile = request.user.profile
+    try:
+        profile = request.user.profile
     except UserProfile.DoesNotExist: return redirect('settings')
+
+    if not profile.is_pro:
+        messages.info(request, "Premium reports are available for Pro users. Please upgrade to access.")
+        return redirect('billing')
+
 
     stats = calculate_dashboard_stats(profile)
     weight_prediction = predict_weight_trend(profile)
@@ -444,7 +460,11 @@ def get_diet_plan(request):
 def export_report_api(request):
     redirect_res = verified_user_redirect(request)
     if redirect_res: return redirect_res
-    profile, format = request.user.profile, request.GET.get('format', 'pdf')
+    profile = request.user.profile
+    if not profile.is_pro:
+        return JsonResponse({'error': 'Pro subscription required for exporting reports.'}, status=403)
+    
+    format = request.GET.get('format', 'pdf')
     start_date_str, end_date_str = request.GET.get('start_date'), request.GET.get('end_date')
     try:
         start_date = timezone.datetime.strptime(start_date_str, '%Y-%m-%d').date() if start_date_str else timezone.now().date() - timezone.timedelta(days=30)
@@ -493,7 +513,7 @@ def process_payment_api(request):
         profile.subscription_status = 'Pro'
         from datetime import date, timedelta
         current_expiry = profile.subscription_expires
-        profile.subscription_expires = (current_expiry if current_expiry and current_expiry > date.today() else date.today()) + timedelta(days=30)
+        profile.subscription_expires = (current_expiry if current_expiry and current_expiry > date.today() else date.today()) + timedelta(days=plan.duration_days)
         profile.save()
         return JsonResponse({'success': True, 'message': 'Payment successful!', 'transaction_id': txn_id})
     except Exception as e: return JsonResponse({'success': False, 'error': str(e)}, status=400)

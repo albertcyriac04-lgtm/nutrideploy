@@ -163,14 +163,43 @@ class UserProfile(models.Model):
         return f"{self.name} - {self.age}y, {self.weight}kg"
 
 class SubscriptionPlan(models.Model):
-    """Central configuration for subscription pricing"""
+    """Central configuration for subscription pricing - fully admin-configurable"""
+    CYCLE_CHOICES = [
+        ('free', 'Free'),
+        ('monthly', 'Monthly'),
+        ('annual', 'Annual'),
+    ]
     name = models.CharField(max_length=50, default="Pro Plan")
-    amount = models.DecimalField(max_digits=10, decimal_places=2, help_text="Monthly subscription fee")
-    description = models.TextField(blank=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2, help_text="Subscription fee (0 for free)")
+    billing_cycle = models.CharField(max_length=10, choices=CYCLE_CHOICES, default='monthly')
+    description = models.TextField(blank=True, help_text="Short tagline shown below price")
+    features = models.JSONField(default=list, blank=True, help_text='List of features. Prefix with x: to mark unavailable')
+    is_popular = models.BooleanField(default=False, help_text="Show Most Popular badge")
+    is_free = models.BooleanField(default=False, help_text="Mark as free tier")
+    badge_label = models.CharField(max_length=20, blank=True, help_text="e.g. FREE, PREMIUM, ANNUAL")
+    accent_color = models.CharField(max_length=20, default='emerald', help_text="Tailwind color: emerald, teal, indigo")
+    savings_text = models.CharField(max_length=50, blank=True, help_text="e.g. Save 1089")
+    duration_days = models.IntegerField(default=30, help_text="Subscription duration in days")
+    sort_order = models.IntegerField(default=0, help_text="Display order (lower first)")
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        ordering = ['sort_order', 'amount']
+
     def __str__(self):
-        return f"{self.name} - ${self.amount}"
+        return f"{self.name} - Rs.{self.amount}"
+
+    @property
+    def enabled_features(self):
+        return [f for f in (self.features or []) if not f.startswith('x:')]
+
+    @property
+    def disabled_features(self):
+        return [f[2:] for f in (self.features or []) if f.startswith('x:')]
+
+    @property
+    def cycle_label(self):
+        return {'free': 'forever', 'monthly': '/mo', 'annual': '/yr'}.get(self.billing_cycle, '')
 
 
 class FoodItem(models.Model):

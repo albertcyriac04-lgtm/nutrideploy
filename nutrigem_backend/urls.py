@@ -16,6 +16,7 @@ from user_app.views import (
     api_logs_by_date
 )
 from api.views_frontend import diet_planner_page, diet_plan_api, log_advanced_meal_api
+from django.views.generic import TemplateView
 
 
 urlpatterns = [
@@ -47,6 +48,7 @@ urlpatterns = [
     path('api/log-advanced-meal/', log_advanced_meal_api, name='log_advanced_meal'),
     path('api/water-requirement/', api_get_water_requirement, name='api_get_water_requirement'),
     path('api/logs-by-date/', api_logs_by_date, name='api_logs_by_date'),
+    path('payment/', TemplateView.as_view(template_name='payment.html'), name='payment'),
 
 
     path('export/report/', export_report_api, name='export_report'),
