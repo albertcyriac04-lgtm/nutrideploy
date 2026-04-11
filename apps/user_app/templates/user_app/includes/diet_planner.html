@@ -285,9 +285,15 @@ function renderDietResults(res) {
     document.getElementById('hydroTips').innerText = data.hydration?.tips || '';
 
     // Cadence Rendering
+    const todayDay = new Date().toLocaleDateString('en-US', { weekday: 'long' });
     document.getElementById('mealsContainer').innerHTML = (data.meal_plan||[]).map(meal => `
-        <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm hover:border-emerald-200 transition-all group overflow-hidden">
-            <div class="flex justify-between items-start mb-4">
+        <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm hover:border-emerald-200 transition-all group overflow-hidden relative">
+            <div class="absolute right-4 top-4">
+                <button onclick="toggleFavoriteOnFly('${meal.meal}', \`${JSON.stringify(meal.foods).replace(/"/g, '&quot;')}\`, '${todayDay}', this)" class="text-xl text-slate-300 hover:text-red-500 transition-colors">
+                    <i class="fas fa-heart"></i>
+                </button>
+            </div>
+            <div class="flex justify-between items-start mb-4 pr-8">
                 <div>
                     <h4 class="font-black text-slate-800 text-lg uppercase tracking-tight">${meal.meal}</h4>
                     <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">${meal.time_window}</p>
@@ -337,6 +343,36 @@ function logSyntheticMeal(mealName, foods, calories, btn) {
     .catch(() => {
         btn.innerText = 'Fatal Error';
         btn.disabled = false;
+    });
+}
+
+function toggleFavoriteOnFly(mealType, foodsJson, day, btn) {
+    const foods = JSON.parse(foodsJson);
+    const foodName = foods.slice(0, 2).join(', '); // Use first 2 items as reference name
+    
+    fetch("{% url 'toggle_favorite' %}", {
+        method: 'POST',
+        body: JSON.stringify({
+            meal_type: mealType,
+            food_name: foodName,
+            day_of_week: day
+        }),
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (data.is_favorite) {
+                btn.classList.remove('text-slate-300');
+                btn.classList.add('text-red-500');
+            } else {
+                btn.classList.remove('text-red-500');
+                btn.classList.add('text-slate-300');
+            }
+        }
     });
 }
 </script>

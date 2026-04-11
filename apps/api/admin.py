@@ -1,7 +1,11 @@
 from django.contrib import admin
 from django import forms
 from admin_app.admin_views import nutridiet_admin
-from .models import UserProfile, FoodItem, ConsumptionLog, WeightRecord, WaterLog, DailyMealLog, SubscriptionPlan, Transaction
+from .models import (
+    UserProfile, FoodItem, ConsumptionLog, WeightRecord, WaterLog, 
+    DailyMealLog, SubscriptionPlan, Transaction, FoodPreference, 
+    AdminExpense, DeletedRecord
+)
 
 # Also register auth models with custom admin
 from django.contrib.auth.models import User, Group
@@ -173,4 +177,30 @@ class TransactionAdmin(BaseAdmin):
     list_per_page = 30
 
 nutridiet_admin.register(Transaction, TransactionAdmin)
+
+
+class FoodPreferenceAdmin(BaseAdmin):
+    list_display = ['user_profile', 'food_item', 'meal_type', 'day_of_week', 'is_favorite']
+    list_filter = ['meal_type', 'day_of_week', 'is_favorite']
+    search_fields = ['user_profile__name', 'food_item__name']
+    autocomplete_fields = ['user_profile', 'food_item']
+
+nutridiet_admin.register(FoodPreference, FoodPreferenceAdmin)
+
+
+class AdminExpenseAdmin(BaseAdmin):
+    list_display = ['title', 'amount', 'category', 'date', 'created_at']
+    list_filter = ['category', 'date']
+    search_fields = ['title', 'description']
+    date_hierarchy = 'date'
+
+nutridiet_admin.register(AdminExpense, AdminExpenseAdmin)
+
+
+class DeletedRecordAdmin(BaseAdmin):
+    list_display = ['model_name', 'original_id', 'deleted_at']
+    list_filter = ['model_name', 'deleted_at']
+    readonly_fields = ['model_name', 'original_id', 'details', 'deleted_at']
+
+nutridiet_admin.register(DeletedRecord, DeletedRecordAdmin)
 

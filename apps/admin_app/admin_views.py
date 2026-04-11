@@ -9,9 +9,18 @@ from django.template.response import TemplateResponse
 import json
 from datetime import timedelta
 from io import BytesIO
+import io
+
+# Report generation imports
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas
+from reportlab.lib.utils import ImageReader
+
+# Charting imports
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 
 class NutriDietAdminSite(AdminSite):
@@ -37,7 +46,8 @@ class NutriDietAdminSite(AdminSite):
     def _build_dashboard_stats(self):
         from api.models import (
             UserProfile, FoodItem, ConsumptionLog, WeightRecord,
-            WaterLog, DailyDietPlan, Transaction
+            WaterLog, DailyDietPlan, Transaction, AdminExpense,
+            DeletedRecord
         )
 
         today = timezone.now().date()
@@ -49,12 +59,20 @@ class NutriDietAdminSite(AdminSite):
         pro_percentage = round((pro_users / total_users * 100), 1) if total_users > 0 else 0
         total_revenue = Transaction.objects.filter(status='Success').aggregate(total=Sum('amount'))['total'] or 0
         total_transactions = Transaction.objects.filter(status='Success').count()
+        
+        # New: Admin Expenses
+        total_expenses = AdminExpense.objects.aggregate(total=Sum('amount'))['total'] or 0
+        expenses_week = AdminExpense.objects.filter(date__gte=week_ago).aggregate(total=Sum('amount'))['total'] or 0
+        
         total_food_items = FoodItem.objects.count()
         total_consumption_logs = ConsumptionLog.objects.count()
         logs_today = ConsumptionLog.objects.filter(date=today).count()
         water_logs_today = WaterLog.objects.filter(date=today).count()
         weight_logs_today = WeightRecord.objects.filter(date=today).count()
         diet_plans_today = DailyDietPlan.objects.filter(date=today).count()
+        
+        # New: Deleted summary
+        total_deleted = DeletedRecord.objects.count()
 
         return {
             'today': today,
@@ -64,12 +82,15 @@ class NutriDietAdminSite(AdminSite):
             'pro_percentage': pro_percentage,
             'total_revenue': total_revenue,
             'total_transactions': total_transactions,
+            'total_expenses': total_expenses,
+            'expenses_week': expenses_week,
             'total_food_items': total_food_items,
             'total_consumption_logs': total_consumption_logs,
             'logs_today': logs_today,
             'water_logs_today': water_logs_today,
             'weight_logs_today': weight_logs_today,
             'diet_plans_today': diet_plans_today,
+            'total_deleted': total_deleted,
         }
 
     def index(self, request, extra_context=None):
@@ -99,6 +120,15 @@ class NutriDietAdminSite(AdminSite):
         if sum(meal_data) == 0:
             meal_data = [1, 1, 1, 1]
 
+        # -- Expense distribution by category --
+        from api.models import AdminExpense
+        expense_counts = AdminExpense.objects.values('category').annotate(amount=Sum('amount'))
+        expense_labels = [e['category'] for e in expense_counts]
+        expense_data = [float(e['amount']) for e in expense_counts]
+        if not expense_data:
+            expense_labels = ['No Data']
+            expense_data = [1]
+
         # -- Recent users --
         recent_users = User.objects.filter(is_staff=False).order_by('-date_joined')[:5]
 
@@ -114,6 +144,8 @@ class NutriDietAdminSite(AdminSite):
             'registration_labels': json.dumps(registration_labels),
             'registration_data': json.dumps(registration_data),
             'meal_data': json.dumps(meal_data),
+            'expense_labels': json.dumps(expense_labels),
+            'expense_data': json.dumps(expense_data),
             'recent_users': recent_users,
         }
 
@@ -121,46 +153,131 @@ class NutriDietAdminSite(AdminSite):
         return TemplateResponse(request, 'admin/index.html', context)
 
     def dashboard_report_view(self, request):
-        stats = self._build_dashboard_stats()
-        recent_users = User.objects.filter(is_staff=False).order_by('-date_joined')[:5]
+        from api.models import UserProfile, Transaction, AdminExpense, DeletedRecord
+        from datetime import datetime
 
-        buffer = BytesIO()
+        # Get date range from request
+        start_date_str = request.GET.get('from')
+        end_date_str = request.GET.get('to')
+        
+        filter_applied = False
+        if start_date_str and end_date_str:
+            try:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+                filter_applied = True
+            except ValueError:
+                start_date = timezone.now().date() - timedelta(days=30)
+                end_date = timezone.now().date()
+        else:
+            start_date = timezone.now().date() - timedelta(days=30)
+            end_date = timezone.now().date()
+
+        stats = self._build_dashboard_stats()
+        
+        # Filtered data
+        if filter_applied:
+            filtered_revenue = Transaction.objects.filter(
+                status='Success', created_at__date__gte=start_date, created_at__date__lte=end_date
+            ).aggregate(total=Sum('amount'))['total'] or 0
+            filtered_users = User.objects.filter(
+                date_joined__date__gte=start_date, date_joined__date__lte=end_date
+            ).count()
+            filtered_pro = UserProfile.objects.filter(
+                subscription_status='Pro', created_at__date__gte=start_date, created_at__date__lte=end_date
+            ).count()
+            filtered_expenses = AdminExpense.objects.filter(
+                date__gte=start_date, date__lte=end_date
+            ).aggregate(total=Sum('amount'))['total'] or 0
+        else:
+            filtered_revenue = stats['total_revenue']
+            filtered_users = stats['total_users']
+            filtered_pro = stats['pro_users']
+            filtered_expenses = stats['total_expenses']
+
+        recent_users = User.objects.filter(is_staff=False).order_by('-date_joined')[:5]
+        deleted_summary_list = list(DeletedRecord.objects.values('model_name').annotate(count=Count('id')))
+
+        buffer = io.BytesIO()
         pdf = canvas.Canvas(buffer, pagesize=letter)
         width, height = letter
         y = height - 0.8 * inch
 
-        pdf.setTitle("NutriDiet Admin Dashboard Report")
+        pdf.setTitle("NutriDiet Admin Performance Report")
         pdf.setFont("Helvetica-Bold", 18)
-        pdf.drawString(0.8 * inch, y, "NutriDiet Admin Dashboard Report")
+        pdf.drawString(0.8 * inch, y, "NutriDiet Admin Performance Report")
         y -= 0.3 * inch
         pdf.setFont("Helvetica", 10)
-        pdf.drawString(0.8 * inch, y, f"Generated on {stats['today'].strftime('%B %d, %Y')}")
+        pdf.drawString(0.8 * inch, y, f"Period: {start_date} to {end_date} | Generated: {timezone.now().strftime('%Y-%m-%d %H:%M')}")
         y -= 0.45 * inch
 
         pdf.setFont("Helvetica-Bold", 12)
-        pdf.drawString(0.8 * inch, y, "Platform Summary")
+        pdf.drawString(0.8 * inch, y, "Financial & Growth Summary")
         y -= 0.25 * inch
         pdf.setFont("Helvetica", 10)
 
         lines = [
-            f"Total users: {stats['total_users']}",
-            f"New users this week: {stats['new_users_week']}",
-            f"Pro members: {stats['pro_users']} ({stats['pro_percentage']}%)",
-            f"Successful revenue: ${stats['total_revenue']:.2f} from {stats['total_transactions']} transactions",
-            f"Food items available: {stats['total_food_items']}",
-            f"Total consumption logs: {stats['total_consumption_logs']}",
-            f"Today's meals logged: {stats['logs_today']}",
-            f"Today's water logs: {stats['water_logs_today']}",
-            f"Today's weight logs: {stats['weight_logs_today']}",
-            f"Today's diet plans: {stats['diet_plans_today']}",
+            f"Total Revenue in period: \u20b9{filtered_revenue:.2f}",
+            f"Total Expenses in period: \u20b9{filtered_expenses:.2f}",
+            f"Net Profit/Loss: \u20b9{(filtered_revenue - filtered_expenses):.2f}",
+            f"New Registrations: {filtered_users}",
+            f"New Pro Subscriptions: {filtered_pro}",
+            f"Conversion Rate: {(filtered_pro/filtered_users*100 if filtered_users > 0 else 0):.1f}%",
         ]
         for line in lines:
             pdf.drawString(0.95 * inch, y, line)
             y -= 0.22 * inch
 
-        y -= 0.15 * inch
+        y -= 0.25 * inch
         pdf.setFont("Helvetica-Bold", 12)
-        pdf.drawString(0.8 * inch, y, "Recent Registrations")
+        pdf.drawString(0.8 * inch, y, "Performance Charts")
+        y -= 0.3 * inch
+
+        # --- Chart 1: Revenue vs Expenses ---
+        plt.figure(figsize=(6, 3))
+        plt.bar(['Revenue', 'Expenses'], [float(filtered_revenue), float(filtered_expenses)], color=['#10b981', '#ef4444'])
+        plt.title('Financial Comparison', fontsize=10)
+        plt.ylabel('Amount (₹)', fontsize=8)
+        plt.grid(axis='y', alpha=0.3)
+        plt.tight_layout()
+        
+        c1_buf = io.BytesIO()
+        plt.savefig(c1_buf, format='png', dpi=100)
+        plt.close()
+        c1_buf.seek(0)
+        pdf.drawImage(ImageReader(c1_buf), 0.8 * inch, y - 2.5 * inch, width=3.5 * inch, height=2.2 * inch)
+        
+        # --- Chart 2: Deleted Items Distribution ---
+        if deleted_summary_list:
+            plt.figure(figsize=(4, 4))
+            labels = [d['model_name'] for d in deleted_summary_list]
+            values = [d['count'] for d in deleted_summary_list]
+            plt.pie(values, labels=labels, autopct='%1.1f%%', colors=['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b'], textprops={'fontsize': 7})
+            plt.title('Deleted Items Split', fontsize=10)
+            plt.tight_layout()
+            
+            c2_buf = io.BytesIO()
+            plt.savefig(c2_buf, format='png', dpi=100)
+            plt.close()
+            c2_buf.seek(0)
+            pdf.drawImage(ImageReader(c2_buf), 4.4 * inch, y - 2.5 * inch, width=2.8 * inch, height=2.3 * inch)
+        
+        y -= 2.8 * inch
+
+        pdf.setFont("Helvetica-Bold", 12)
+        pdf.drawString(0.8 * inch, y, "Deleted Items Summary")
+        y -= 0.25 * inch
+        pdf.setFont("Helvetica", 10)
+        if deleted_summary_list:
+            for item in deleted_summary_list:
+                pdf.drawString(0.95 * inch, y, f"{item['model_name']}: {item['count']} items deleted")
+                y -= 0.22 * inch
+        else:
+            pdf.drawString(0.95 * inch, y, "No items deleted in history.")
+
+        y -= 0.25 * inch
+        pdf.setFont("Helvetica-Bold", 12)
+        pdf.drawString(0.8 * inch, y, "Recent User Registrations")
         y -= 0.25 * inch
         pdf.setFont("Helvetica", 10)
         if recent_users:
@@ -180,7 +297,7 @@ class NutriDietAdminSite(AdminSite):
         buffer.seek(0)
 
         response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
-        response['Content-Disposition'] = 'attachment; filename=\"nutridiet_admin_dashboard_report.pdf\"'
+        response['Content-Disposition'] = f'attachment; filename=\"nutridiet_report_{start_date}_to_{end_date}.pdf\"'
         return response
 
 

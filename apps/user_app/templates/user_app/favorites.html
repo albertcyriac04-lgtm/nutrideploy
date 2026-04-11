@@ -1,0 +1,98 @@
+{% extends 'user_app/base.html' %}
+{% load static %}
+
+{% block title %}NutriDiet - My Favorites{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="mb-10 text-center">
+        <h1 class="text-4xl font-extrabold mb-4 font-heading text-slate-800">
+            My <span class="bg-gradient-to-r from-red-500 to-pink-600 bg-clip-text text-transparent">Favorite</span> Foods
+        </h1>
+        <p class="text-slate-500 text-lg max-w-2xl mx-auto">
+            Your personal collection of meals you love. These favorites help our AI coach personalize your future diet plans.
+        </p>
+    </div>
+
+    {% if favorite_foods %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for fav in favorite_foods %}
+        <div id="fav-card-{{ fav.id }}" class="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
+            <div class="absolute top-0 right-0 p-4">
+                <button onclick="removeFavorite({{ fav.id }}, this)" class="text-red-500 hover:text-red-700 transition-colors">
+                    <i class="fas fa-heart text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="mb-4">
+                <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">{{ fav.meal_type }}</span>
+                <h3 class="text-xl font-bold text-slate-800">{{ fav.food_name }}</h3>
+                <p class="text-xs text-slate-500 mt-1">Suggested for: <span class="font-bold text-emerald-600">{{ fav.day_of_week }}s</span></p>
+            </div>
+
+            <div class="flex gap-2 mt-6">
+                <button onclick="copyToClipboard('{{ fav.food_name|escapejs }}')" class="flex-1 py-3 bg-slate-50 text-slate-600 hover:bg-slate-100 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+                    <i class="far fa-copy"></i> Copy Name
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-white rounded-[2rem] p-16 text-center shadow-sm border border-slate-100">
+        <div class="w-24 h-24 bg-red-50 text-red-400 rounded-full flex items-center justify-center mx-auto mb-6">
+            <i class="far fa-heart text-4xl"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-slate-800 mb-2">No favorites yet</h2>
+        <p class="text-slate-500 mb-8 max-w-md mx-auto">Start liking meals in your diet plan or AI coach to see them here.</p>
+        <a href="{% url 'diet_plan' %}" class="inline-flex items-center gap-2 bg-slate-900 text-white px-8 py-4 rounded-2xl font-bold hover:bg-slate-800 transition-all">
+            Explore Diet Plan <i class="fas fa-arrow-right text-xs"></i>
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function removeFavorite(favId, btn) {
+    if(!confirm("Remove this from favorites?")) return;
+    
+    // Find the actual food_name, meal_type, etc from the card
+    const card = document.getElementById(`fav-card-${favId}`);
+    const foodName = card.querySelector('h3').innerText;
+    const mealType = card.querySelector('span').innerText;
+    const dayOfWeek = card.querySelector('.font-bold.text-emerald-600').innerText.replace('s', '');
+
+    fetch("{% url 'toggle_favorite' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            food_name: foodName,
+            meal_type: mealType,
+            day_of_week: dayOfWeek
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success) {
+            card.style.opacity = '0';
+            card.style.transform = 'scale(0.9)';
+            setTimeout(() => {
+                card.remove();
+                if(document.querySelectorAll('[id^="fav-card-"]').length === 0) {
+                    location.reload();
+                }
+            }, 300);
+        }
+    });
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        alert("Copied to clipboard: " + text);
+    });
+}
+</script>
+{% endblock %}

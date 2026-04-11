@@ -97,6 +97,11 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Session Settings
+SESSION_COOKIE_AGE = 1209600 # 2 weeks in seconds
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+SESSION_SAVE_EVERY_REQUEST = True
+
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
@@ -125,3 +130,8 @@ CORS_ALLOW_ALL_ORIGINS = False
 CSRF_TRUSTED_ORIGINS = []
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+# ── Environment-specific settings (formerly settings_local.py) ──────────────
+DEBUG = os.getenv("DEBUG", "True") == "True"
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "*"]
+CORS_ALLOW_ALL_ORIGINS = DEBUG  # convenience for local frontend dev

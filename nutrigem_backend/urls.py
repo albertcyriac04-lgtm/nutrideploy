@@ -11,11 +11,14 @@ from user_app.views import (
     log_meal_api, remove_meal_api, billing_view, process_payment_api,
     full_report_view,
     download_invoice_api,
+    api_logs_by_date,
+    send_registration_otp,
+    toggle_food_preference_api,
     all_logs_view,
     api_get_water_requirement,
-    api_logs_by_date
+    favorites_view
 )
-from api.views_frontend import diet_planner_page, diet_plan_api, log_advanced_meal_api
+from api.views import diet_planner_page, diet_plan_api, log_advanced_meal_api
 from django.views.generic import TemplateView
 
 
@@ -24,11 +27,13 @@ urlpatterns = [
     path('api/', include('api.urls')),
     path('', landing, name='landing'),
     path('register/', register_view, name='register'),
+    path('api/send-otp/', send_registration_otp, name='send_otp'),
     path('login/', login_view, name='login'),
 
     path('dashboard/', index, name='index'),
     path('logs/', logs_view, name='logs'),
     path('logs/all/', all_logs_view, name='all_logs'),
+    path('favorites/', favorites_view, name='favorites'),
     path('coach/', coach_view, name='coach'),
     path('report/', full_report_view, name='full_report'),
     path('settings/', settings_view, name='settings'),
@@ -48,6 +53,7 @@ urlpatterns = [
     path('api/log-advanced-meal/', log_advanced_meal_api, name='log_advanced_meal'),
     path('api/water-requirement/', api_get_water_requirement, name='api_get_water_requirement'),
     path('api/logs-by-date/', api_logs_by_date, name='api_logs_by_date'),
+    path('api/toggle-favorite/', toggle_food_preference_api, name='toggle_favorite'),
     path('payment/', TemplateView.as_view(template_name='payment.html'), name='payment'),
 
 
@@ -71,5 +77,3 @@ urlpatterns = [
 
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-
-

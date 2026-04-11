@@ -18,6 +18,11 @@
                 <i class="fas fa-utensils w-5 text-center"></i>
                 <span>Food Logs</span>
             </a>
+            <a href="{% url 'favorites' %}"
+                class="sidebar-link-hover flex items-center gap-3 px-4 py-3 rounded-2xl transition-all {% if request.resolver_match.url_name == 'favorites' %}sidebar-link-active{% else %}text-slate-500 font-medium{% endif %}">
+                <i class="fas fa-heart w-5 text-center"></i>
+                <span>Favorites</span>
+            </a>
             <a href="{% url 'coach' %}"
                 class="sidebar-link-hover flex items-center gap-3 px-4 py-3 rounded-2xl transition-all {% if request.resolver_match.url_name == 'coach' %}sidebar-link-active{% else %}text-slate-500 font-medium{% endif %}">
                 <i class="fas fa-robot w-5 text-center"></i>

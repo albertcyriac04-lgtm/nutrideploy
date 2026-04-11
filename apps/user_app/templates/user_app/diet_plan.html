@@ -1,4 +1,4 @@
-﻿{% extends 'user_app/base.html' %}
+{% extends 'user_app/base.html' %}
 {% load static %}
 
 {% block content %}
@@ -35,6 +35,11 @@
                 <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg">
                     {{ plan.breakfast_calories|floatformat:0 }} kcal
                 </span>
+                <button onclick="toggleFavorite('Breakfast', '{{ plan.breakfast|escapejs }}', this)" 
+                    class="ml-2 text-xl transition-colors {% if fav_map.Breakfast == plan.breakfast %}text-red-500{% else %}text-slate-300 hover:text-red-400{% endif %}"
+                    title="Add to Favorites">
+                    <i class="fas fa-heart"></i>
+                </button>
             </div>
             <div class="text-slate-600 text-sm leading-8 whitespace-pre-line mb-4">
                 {{ plan.breakfast }}
@@ -65,6 +70,11 @@
                 <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg">
                     {{ plan.lunch_calories|floatformat:0 }} kcal
                 </span>
+                <button onclick="toggleFavorite('Lunch', '{{ plan.lunch|escapejs }}', this)" 
+                    class="ml-2 text-xl transition-colors {% if fav_map.Lunch == plan.lunch %}text-red-500{% else %}text-slate-300 hover:text-red-400{% endif %}"
+                    title="Add to Favorites">
+                    <i class="fas fa-heart"></i>
+                </button>
             </div>
             <div class="text-slate-600 text-sm leading-8 whitespace-pre-line mb-4">
                 {{ plan.lunch }}
@@ -95,6 +105,11 @@
                 <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg">
                     {{ plan.snacks_calories|floatformat:0 }} kcal
                 </span>
+                <button onclick="toggleFavorite('Snack', '{{ plan.snacks|escapejs }}', this)" 
+                    class="ml-2 text-xl transition-colors {% if fav_map.Snack == plan.snacks %}text-red-500{% else %}text-slate-300 hover:text-red-400{% endif %}"
+                    title="Add to Favorites">
+                    <i class="fas fa-heart"></i>
+                </button>
             </div>
             <div class="text-slate-600 text-sm leading-8 whitespace-pre-line mb-4">
                 {{ plan.snacks }}
@@ -125,6 +140,11 @@
                 <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg">
                     {{ plan.dinner_calories|floatformat:0 }} kcal
                 </span>
+                <button onclick="toggleFavorite('Dinner', '{{ plan.dinner|escapejs }}', this)" 
+                    class="ml-2 text-xl transition-colors {% if fav_map.Dinner == plan.dinner %}text-red-500{% else %}text-slate-300 hover:text-red-400{% endif %}"
+                    title="Add to Favorites">
+                    <i class="fas fa-heart"></i>
+                </button>
             </div>
             <div class="text-slate-600 text-sm leading-8 whitespace-pre-line mb-4">
                 {{ plan.dinner }}
@@ -206,6 +226,34 @@
                         btn.innerHTML = originalHtml;
                     }
                 });
+        }
+        function toggleFavorite(mealType, foodName, btn) {
+            fetch("{% url 'toggle_favorite' %}", {
+                method: 'POST',
+                body: JSON.stringify({
+                    meal_type: mealType,
+                    food_name: foodName,
+                    day_of_week: "{{ plan.date|date:'l' }}"
+                }),
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (data.is_favorite) {
+                        btn.classList.remove('text-slate-300', 'hover:text-red-400');
+                        btn.classList.add('text-red-500');
+                    } else {
+                        btn.classList.remove('text-red-500');
+                        btn.classList.add('text-slate-300', 'hover:text-red-400');
+                    }
+                } else {
+                    alert(data.error || 'Failed to update favorite');
+                }
+            });
         }
     </script>
     {% else %}

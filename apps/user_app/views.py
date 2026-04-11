@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.conf import settings
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import logout, login, authenticate, update_session_auth_hash
@@ -9,17 +9,94 @@ from django.contrib.auth.forms import UserCreationForm, PasswordChangeForm
 from django import forms
 from django.contrib.auth.models import User
 from django.urls import reverse
+from django.core.exceptions import ValidationError
+from django.core.mail import send_mail
+from django.contrib import messages
 import json
 import uuid
-from api.models import UserProfile, FoodItem, ConsumptionLog, WeightRecord, WaterLog, DailyDietPlan, DailyMealLog, SubscriptionPlan, Transaction
-from api.serializers import UserProfileSerializer, FoodItemSerializer, ConsumptionLogSerializer, WeightRecordSerializer
+import re
+import random
 from django.utils import timezone
+
+from api.models import (
+    UserProfile, FoodItem, ConsumptionLog, WeightRecord, WaterLog,
+    DailyDietPlan, DailyMealLog, SubscriptionPlan, Transaction, RegistrationOTP,
+    FoodPreference
+)
+from api.serializers import UserProfileSerializer, FoodItemSerializer, ConsumptionLogSerializer, WeightRecordSerializer
 from api.ml_utils import predict_weight_trend
 from api.ai_utils import generate_indian_diet, generate_report_summary, normalize_saved_diet_plan, calculate_bmi, classify_bmi, get_water_recommendation
 from api.report_utils import export_to_excel, export_to_pdf
 import google.generativeai as genai
-from django.contrib import messages
-from django.http import HttpResponse
+
+# ══════════════════════════════════════════════════════════
+# CUSTOM VALIDATORS & FORMS
+# ══════════════════════════════════════════════════════════
+
+def validate_password_strength(value):
+    """
+    Custom validator to ensure password meets complexity requirements:
+    - 8 to 50 characters long
+    - At least one capital letter
+    - At least one number
+    - At least one special symbol
+    """
+    if len(value) < 8 or len(value) > 50:
+        raise ValidationError("Password must be between 8 and 50 characters long.")
+    if not re.search(r'[A-Z]', value):
+        raise ValidationError("Password must contain at least one capital letter.")
+    if not re.search(r'[0-9]', value):
+        raise ValidationError("Password must contain at least one number.")
+    if not re.search(r'[!@#$%^&*(),.?":{}|<>]', value):
+        raise ValidationError("Password must contain at least one special symbol.")
+
+class UserRegistrationForm(UserCreationForm):
+    """
+    Enhanced UserCreationForm with email uniqueness and password strength checks.
+    """
+    email = forms.EmailField(required=True, help_text="Required for account verification")
+    
+    class Meta(UserCreationForm.Meta):
+        fields = UserCreationForm.Meta.fields + ('email',)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Add placeholders and required attributes
+        placeholders = {
+            'username': 'Choose a unique username',
+            'email': 'Enter your valid email address',
+            'password1': '8-50 chars, mixed case, numbers, symbols',
+            'password2': 'Confirm your secure password',
+        }
+        for field_name, field in self.fields.items():
+            field.widget.attrs.update({
+                'placeholder': placeholders.get(field_name, ''),
+                'class': 'registration-input',
+                'required': 'required'
+            })
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if User.objects.filter(email=email).exists():
+            raise ValidationError("This email is already registered. Please use a different one.")
+        return email
+
+    def clean_password1(self):
+        password = self.cleaned_data.get('password1')
+        validate_password_strength(password)
+        return password
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.email = self.cleaned_data["email"]
+        if commit:
+            user.save()
+        return user
+
+
+# ══════════════════════════════════════════════════════════
+# DATA AGGREGATION HELPERS
+# ══════════════════════════════════════════════════════════
 
 def build_recent_activity(profile):
     manual_logs = ConsumptionLog.objects.filter(user_profile=profile).order_by('-date', '-created_at')
@@ -34,6 +111,7 @@ def build_recent_activity(profile):
             'subtitle': log.date.strftime('%Y-%m-%d'),
             'date': log.date,
             'calories': log.total_calories,
+            'id': log.id,
             'sort_weight': 0,
         })
 
@@ -85,7 +163,6 @@ def build_grouped_activity(profile, limit=None):
         if m_type in grouped[date_str]:
             grouped[date_str][m_type].append(item)
         else:
-            # Handle any custom meal types that might not be in the keys
             if 'Extras' not in grouped[date_str]: grouped[date_str]['Extras'] = []
             grouped[date_str]['Extras'].append(item)
     
@@ -93,11 +170,6 @@ def build_grouped_activity(profile, limit=None):
     return [{'date': d, 'meals': grouped[d]} for d in sorted_dates]
 
 def verified_user_redirect(request):
-    """
-    Helper to ensure user is authenticated. 
-    Redirects to landing if not logged in.
-    Redirects admins to the admin panel directly.
-    """
     if not request.user.is_authenticated:
         return redirect('landing')
     if request.user.is_staff:
@@ -105,15 +177,14 @@ def verified_user_redirect(request):
     return None
 
 def landing(request):
-    """Landing page or direct portal for logged-in users"""
     if request.user.is_authenticated:
         if request.user.is_staff:
             return redirect('/admin/')
         return redirect('index')
     return render(request, 'user_app/landing.html')
 
+@login_required
 def index(request):
-    """Main dashboard view"""
     redirect_res = verified_user_redirect(request)
     if redirect_res: return redirect_res
     
@@ -143,103 +214,161 @@ def index(request):
     }
     return render(request, 'user_app/index.html', context)
 
-class UserRegistrationForm(UserCreationForm):
-    email = forms.EmailField(required=True, help_text="Required for account verification")
-    class Meta(UserCreationForm.Meta): fields = UserCreationForm.Meta.fields + ('email',)
-    def save(self, commit=True):
-        user = super().save(commit=False)
-        user.email = self.cleaned_data["email"]
-        if commit: user.save()
-        return user
+# ══════════════════════════════════════════════════════════
+# REGISTRATION WITH OTP FLOW
+# ══════════════════════════════════════════════════════════
+
+@csrf_exempt
+def send_registration_otp(request):
+    """
+    API view to validate initial registration data and send OTP.
+    """
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            username = data.get('username')
+            email = data.get('email')
+            
+            # 1. Unique checks
+            if User.objects.filter(username=username).exists():
+                return JsonResponse({'success': False, 'error': 'Username already exists.'}, status=400)
+            if User.objects.filter(email=email).exists():
+                return JsonResponse({'success': False, 'error': 'Email already registered.'}, status=400)
+            
+            # 2. Generate and store OTP
+            otp = f"{random.randint(100000, 999999)}"
+            RegistrationOTP.objects.update_or_create(
+                email=email,
+                defaults={'otp': otp, 'is_verified': False, 'created_at': timezone.now()}
+            )
+            
+            # 3. Send OTP via email
+            subject = "NutriDiet - Your Registration OTP"
+            message = f"Hello,\n\nYour OTP for NutriDiet registration is: {otp}.\nThis OTP is valid for 10 minutes.\n\nThank you for joining us!"
+            
+            try:
+                send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [email], fail_silently=False)
+            except Exception as mail_err:
+                with open('otp_error_log.txt', 'a') as f:
+                    f.write(f"{timezone.now()} - Mail Error: {str(mail_err)}\n")
+                return JsonResponse({'success': False, 'error': f"Mail Error: {str(mail_err)}"}, status=500)
+            
+            return JsonResponse({'success': True, 'message': 'OTP sent to your email.'})
+        except Exception as e:
+            with open('otp_error_log.txt', 'a') as f:
+                f.write(f"{timezone.now()} - General Error: {str(e)}\n")
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+def register_view(request):
+    """
+    Integrated Registration View with OTP Step.
+    """
+    if request.user.is_authenticated: return redirect('index')
+    
+    if request.method == 'POST':
+        form = UserRegistrationForm(request.POST)
+        otp_code = request.POST.get('otp_code')
+        email = request.POST.get('email')
+        
+        # 1. Validate Form First
+        if form.is_valid():
+            # 2. Check if OTP is provided and matches
+            try:
+                otp_record = RegistrationOTP.objects.get(email=email)
+                if not otp_record.is_valid():
+                    messages.error(request, "OTP expired. Please request a new one.")
+                elif otp_record.otp != otp_code:
+                    messages.error(request, "Invalid OTP. Please try again.")
+                else:
+                    # OTP is valid! Finalize Registration
+                    user = form.save()
+                    UserProfile.objects.create(
+                        user=user, name=user.username, age=25, gender='Male', height=170,
+                        weight=70, target_weight=65, activity_multiplier=1.55
+                    )
+                    # Clear OTP record
+                    otp_record.delete()
+                    
+                    login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+                    messages.success(request, f"Welcome to NutriDiet, {user.username}!")
+                    return redirect('index')
+            except RegistrationOTP.DoesNotExist:
+                messages.error(request, "Please verify your email via OTP before registering.")
+        else:
+            for error in form.errors.values():
+                messages.error(request, error)
+    else:
+        form = UserRegistrationForm()
+        
+    return render(request, 'user_app/register.html', {'form': form})
+
 
 def login_view(request):
-    """Simple username/password login"""
     if request.user.is_authenticated:
         return redirect('/admin/') if request.user.is_staff else redirect('index')
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
+        remember_me = request.POST.get('remember_me')
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
+            if not remember_me:
+                request.session.set_expiry(0) # Store session for the duration of the browser session
+            else:
+                request.session.set_expiry(1209600) # Persist session for 2 weeks
             return redirect('/admin/') if user.is_staff else redirect('index')
-        else: messages.error(request, 'Invalid username or password.')
+        else:
+            messages.error(request, 'Invalid username or password.')
     return render(request, 'user_app/login.html')
 
-def register_view(request):
-    """User registration view"""
-    if request.user.is_authenticated: return redirect('index')
-    if request.method == 'POST':
-        form = UserRegistrationForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            UserProfile.objects.create(
-                user=user, name=user.username, age=25, gender='Male', height=170,
-                weight=70, target_weight=65, activity_multiplier=1.55
-            )
-            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-            return redirect('index')
-    else: form = UserRegistrationForm()
-    return render(request, 'user_app/register.html', {'form': form})
-
 def logs_view(request):
-    """Logs page view limited to 20 items grouped by date"""
     redirect_res = verified_user_redirect(request)
     if redirect_res: return redirect_res
     try: profile = request.user.profile
     except UserProfile.DoesNotExist: return redirect('settings')
-    
     grouped_logs = build_grouped_activity(profile, limit=20)
     food_items = FoodItem.objects.all()
     stats = calculate_dashboard_stats(profile)
-    
-    context = {
-        'profile': profile, 'grouped_logs': grouped_logs,
-        'food_items': food_items, 'stats': stats, 'limit_mode': True
-    }
+    context = {'profile': profile, 'grouped_logs': grouped_logs, 'food_items': food_items, 'stats': stats, 'limit_mode': True}
     return render(request, 'user_app/logs.html', context)
 
 def all_logs_view(request):
-    """View all logs with date grouping"""
     redirect_res = verified_user_redirect(request)
     if redirect_res: return redirect_res
     try: profile = request.user.profile
     except UserProfile.DoesNotExist: return redirect('settings')
-    
     grouped_logs = build_grouped_activity(profile)
     food_items = FoodItem.objects.all()
     stats = calculate_dashboard_stats(profile)
-    
-    context = {
-        'profile': profile, 'grouped_logs': grouped_logs,
-        'food_items': food_items, 'stats': stats, 'limit_mode': False
-    }
+    context = {'profile': profile, 'grouped_logs': grouped_logs, 'food_items': food_items, 'stats': stats, 'limit_mode': False}
     return render(request, 'user_app/logs.html', context)
 
 def coach_view(request):
-    """AI Coach page view"""
     redirect_res = verified_user_redirect(request)
     if redirect_res: return redirect_res
     try: profile = request.user.profile
     except UserProfile.DoesNotExist: return redirect('settings')
-    
     logs = ConsumptionLog.objects.filter(user_profile=profile).order_by('-date', '-created_at')[:20]
     food_items = FoodItem.objects.all()
     return render(request, 'user_app/coach.html', {'profile': profile, 'logs': logs, 'food_items': food_items})
 
-def full_report_view(request):
-    """Detailed current status report page"""
+def favorites_view(request):
     redirect_res = verified_user_redirect(request)
     if redirect_res: return redirect_res
-    try:
-        profile = request.user.profile
-    except UserProfile.DoesNotExist: return redirect('settings')
+    profile = request.user.profile
+    favorite_foods = FoodPreference.objects.filter(user_profile=profile, is_favorite=True).order_by('-created_at')
+    return render(request, 'user_app/favorites.html', {'profile': profile, 'favorite_foods': favorite_foods})
 
+def full_report_view(request):
+    redirect_res = verified_user_redirect(request)
+    if redirect_res: return redirect_res
+    try: profile = request.user.profile
+    except UserProfile.DoesNotExist: return redirect('settings')
     if not profile.is_pro:
         messages.info(request, "Premium reports are available for Pro users. Please upgrade to access.")
         return redirect('billing')
-
-
     stats = calculate_dashboard_stats(profile)
     weight_prediction = predict_weight_trend(profile)
     current_status_report = build_current_status_report(profile, stats, weight_prediction)
@@ -248,7 +377,6 @@ def full_report_view(request):
     recent_logs = ConsumptionLog.objects.filter(user_profile=profile).order_by('-date', '-created_at')[:8]
     weight_records = WeightRecord.objects.filter(user_profile=profile).order_by('-date')[:7]
     water_logs = WaterLog.objects.filter(user_profile=profile, date__range=[start_date, today]).order_by('-date')
-
     context = {
         'profile': profile, 'stats': stats, 'weight_prediction': weight_prediction,
         'current_status_report': current_status_report, 'recent_logs': recent_logs,
@@ -258,14 +386,11 @@ def full_report_view(request):
     return render(request, 'user_app/full_report.html', context)
 
 def settings_view(request):
-    """Settings page view"""
     redirect_res = verified_user_redirect(request)
     if redirect_res: return redirect_res
-    try:
-        profile = request.user.profile
+    try: profile = request.user.profile
     except UserProfile.DoesNotExist:
         profile = UserProfile.objects.create(user=request.user, name=request.user.username, age=25, gender='Male', height=170, weight=70, target_weight=65)
-    
     if request.method == 'POST':
         action = request.POST.get('action')
         if action == 'update_profile':
@@ -295,36 +420,32 @@ def settings_view(request):
             else:
                 for error in form.errors.values(): messages.error(request, error)
         return redirect('settings')
-    
     plans = SubscriptionPlan.objects.all()
     today = timezone.now().date()
     default_start_date = today - timezone.timedelta(days=30)
     
+    favorite_foods = FoodPreference.objects.filter(user_profile=profile, is_favorite=True).order_by('-created_at')
+    
     context = {
-        'profile': profile, 'plans': plans,
-        'default_start_date': default_start_date.strftime('%Y-%m-%d'),
+        'profile': profile, 
+        'plans': plans, 
+        'default_start_date': default_start_date.strftime('%Y-%m-%d'), 
         'default_end_date': today.strftime('%Y-%m-%d'),
+        'favorite_foods': favorite_foods
     }
     return render(request, 'user_app/settings.html', context)
 
 def calculate_dashboard_stats(profile):
-    """Calculate BMR and TDEE using Mifflin-St Jeor Equation"""
     weight, height, age, gender = profile.weight, profile.height, profile.age, profile.gender
     if gender == 'Male': bmr = 10 * weight + 6.25 * height - 5 * age + 5
     else: bmr = 10 * weight + 6.25 * height - 5 * age - 161
-    
     tdee = bmr * profile.activity_multiplier
     daily_calorie_target = tdee - 500 if weight > profile.target_weight else tdee
     today = timezone.now().date()
     current_calories = sum(log.total_calories for log in ConsumptionLog.objects.filter(user_profile=profile, date=today))
     daily_meal_log = DailyMealLog.objects.filter(user_profile=profile, date=today).first()
     if daily_meal_log: current_calories += daily_meal_log.total_calories_consumed
-    
-    return {
-        'bmr': round(bmr), 'tdee': round(tdee), 'daily_calorie_target': round(daily_calorie_target),
-        'current_calories': round(current_calories), 'protein_target': round((daily_calorie_target * 0.3) / 4),
-        'carbs_target': round((daily_calorie_target * 0.4) / 4), 'fats_target': round((daily_calorie_target * 0.3) / 9),
-    }
+    return {'bmr': round(bmr), 'tdee': round(tdee), 'daily_calorie_target': round(daily_calorie_target), 'current_calories': round(current_calories), 'protein_target': round((daily_calorie_target * 0.3) / 4), 'carbs_target': round((daily_calorie_target * 0.4) / 4), 'fats_target': round((daily_calorie_target * 0.3) / 9)}
 
 def build_current_status_report(profile, stats, weight_prediction):
     today = timezone.now().date()
@@ -359,8 +480,7 @@ def add_weight_record(request):
             if request.content_type == 'application/json':
                 data = json.loads(request.body)
                 weight, date = float(data.get('weight', 0)), data.get('date', timezone.now().date())
-            else:
-                weight, date = float(request.POST.get('weight', 0)), request.POST.get('date', timezone.now().date())
+            else: weight, date = float(request.POST.get('weight', 0)), request.POST.get('date', timezone.now().date())
         else: return JsonResponse({'error': 'Method not allowed'}, status=405)
         record, created = WeightRecord.objects.update_or_create(user_profile=request.user.profile, date=date, defaults={'weight': weight})
         request.user.profile.weight = weight
@@ -375,11 +495,7 @@ def add_weight_record(request):
 def add_water_api(request):
     profile = request.user.profile
     date_str = request.POST.get('date')
-    if date_str:
-        try: target_date = timezone.datetime.strptime(date_str, '%Y-%m-%d').date()
-        except: target_date = timezone.now().date()
-    else: target_date = timezone.now().date()
-    
+    target_date = timezone.datetime.strptime(date_str, '%Y-%m-%d').date() if date_str else timezone.now().date()
     action = request.POST.get('action', 'add')
     water_log, created = WaterLog.objects.get_or_create(user_profile=profile, date=target_date, defaults={'target_glasses': profile.water_requirement_glasses})
     if action == 'add': water_log.amount_glasses += 1
@@ -399,8 +515,7 @@ def log_meal_api(request):
         if not plan: return JsonResponse({'error': 'No diet plan found for this date'}, status=404)
         meal_log, created = DailyMealLog.objects.get_or_create(user_profile=profile, date=date)
         content, cals = getattr(plan, meal_type), getattr(plan, f"{meal_type}_calories")
-        setattr(meal_log, f"{meal_type}_content", content)
-        setattr(meal_log, f"{meal_type}_calories", cals)
+        setattr(meal_log, f"{meal_type}_content", content), setattr(meal_log, f"{meal_type}_calories", cals)
         meal_log.save()
         return JsonResponse({'success': True, 'meal_type': meal_type, 'calories': cals, 'total_day': meal_log.total_calories_consumed})
     return JsonResponse({'error': 'Invalid request'}, status=400)
@@ -448,51 +563,48 @@ def get_diet_plan(request):
     if redirect_res: return redirect_res
     profile, today = request.user.profile, timezone.now().date()
     plan = DailyDietPlan.objects.filter(user_profile=profile, date=today).first()
-    if not plan: plan = generate_indian_diet(profile, today)
+    if not plan: 
+        plan = generate_indian_diet(profile, today)
     else:
         plan = normalize_saved_diet_plan(plan, profile)
         if plan is None:
             DailyDietPlan.objects.filter(user_profile=profile, date=today).delete()
             plan = generate_indian_diet(profile, today)
+    
+    preferences = FoodPreference.objects.filter(user_profile=profile, day_of_week=today.strftime('%A'), is_favorite=True)
+    fav_map = {p.meal_type: p.food_name for p in preferences}
+    
     meal_log = DailyMealLog.objects.filter(user_profile=profile, date=today).first()
-    return render(request, 'user_app/diet_plan.html', {'plan': plan, 'profile': profile, 'meal_log': meal_log, 'plan_date': today})
+    return render(request, 'user_app/diet_plan.html', {
+        'plan': plan, 'profile': profile, 'meal_log': meal_log, 'plan_date': today,
+        'fav_map': fav_map
+    })
 
 def export_report_api(request):
     redirect_res = verified_user_redirect(request)
     if redirect_res: return redirect_res
     profile = request.user.profile
-    if not profile.is_pro:
-        return JsonResponse({'error': 'Pro subscription required for exporting reports.'}, status=403)
-    
-    format = request.GET.get('format', 'pdf')
+    if not profile.is_pro: return JsonResponse({'error': 'Pro subscription required for exporting reports.'}, status=403)
+    fmt = request.GET.get('format', 'pdf')
     start_date_str, end_date_str = request.GET.get('start_date'), request.GET.get('end_date')
     try:
         start_date = timezone.datetime.strptime(start_date_str, '%Y-%m-%d').date() if start_date_str else timezone.now().date() - timezone.timedelta(days=30)
         end_date = timezone.datetime.strptime(end_date_str, '%Y-%m-%d').date() if end_date_str else timezone.now().date()
-    except (ValueError, TypeError):
-        end_date = timezone.now().date()
-        start_date = end_date - timezone.timedelta(days=30)
+    except (ValueError, TypeError): end_date = timezone.now().date(); start_date = end_date - timezone.timedelta(days=30)
     logs = ConsumptionLog.objects.filter(user_profile=profile, date__range=[start_date, end_date])
     weights = WeightRecord.objects.filter(user_profile=profile, date__range=[start_date, end_date]).order_by('date')
     waters = WaterLog.objects.filter(user_profile=profile, date__range=[start_date, end_date]).order_by('date')
     meal_logs = DailyMealLog.objects.filter(user_profile=profile, date__range=[start_date, end_date]).order_by('date')
     summary = generate_report_summary(profile, start_date, end_date)
-    if format == 'excel':
+    if fmt == 'excel':
         buffer = export_to_excel(profile, logs, weights, waters, meal_logs, summary)
-        filename = f"NutriDiet_Report_{start_date}_to_{end_date}.xlsx"
-        content_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        filename, content_type = f"NutriDiet_Report_{start_date}_to_{end_date}.xlsx", 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     else:
         buffer = export_to_pdf(profile, logs, weights, waters, meal_logs, summary)
-        filename = f"NutriDiet_Report_{start_date}_to_{end_date}.pdf"
-        content_type = 'application/pdf'
+        filename, content_type = f"NutriDiet_Report_{start_date}_to_{end_date}.pdf", 'application/pdf'
     response = HttpResponse(buffer.getvalue(), content_type=content_type)
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
-
-def logout_view(request):
-    if request.user.is_authenticated: logout(request)
-    request.session.flush()
-    return redirect('landing')
 
 @login_required
 def billing_view(request):
@@ -530,13 +642,6 @@ def download_invoice_api(request, transaction_id):
     from io import BytesIO
     buffer = BytesIO()
     p = canvas.Canvas(buffer, pagesize=letter)
-    p.setFont("Helvetica-Bold", 24), p.drawString(50, 750, "NutriDiet Subscription Invoice")
-    p.setFont("Helvetica", 14)
-    p.drawString(50, 700, f"Invoice #: {txn.transaction_id}"), p.drawString(50, 680, f"Date: {txn.created_at.strftime('%B %d, %Y')}"), p.drawString(50, 660, f"Billed To: {profile.name}"), p.drawString(50, 640, f"Email: {request.user.email}")
-    p.line(50, 620, 550, 620), p.setFont("Helvetica-Bold", 14), p.drawString(50, 590, "Description"), p.drawString(450, 590, "Amount")
-    p.setFont("Helvetica", 14), p.drawString(50, 560, f"{txn.plan_name} Plan Subscription"), p.drawString(450, 560, f"${txn.amount}")
-    p.line(50, 540, 550, 540), p.setFont("Helvetica-Bold", 16), p.drawString(350, 510, "Total Paid:"), p.drawString(450, 510, f"${txn.amount}")
-    p.setFont("Helvetica", 10), p.drawString(50, 480, f"Payment Method: {txn.payment_method}"), p.drawString(50, 465, "Thank you for subscribing to NutriDiet Pro!")
     p.showPage(), p.save(), buffer.seek(0)
     response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="Invoice_{txn.transaction_id}.pdf"'
@@ -551,49 +656,54 @@ def api_get_water_requirement(request):
 @login_required
 def api_logs_by_date(request):
     date_str = request.GET.get('date')
-    if not date_str:
-        return JsonResponse({'error': 'Date required'}, status=400)
-    try:
-        date = timezone.datetime.strptime(date_str, '%Y-%m-%d').date()
-    except Exception:
-        return JsonResponse({'error': 'Invalid date format'}, status=400)
-        
+    if not date_str: return JsonResponse({'error': 'Date required'}, status=400)
+    try: date = timezone.datetime.strptime(date_str, '%Y-%m-%d').date()
+    except Exception: return JsonResponse({'error': 'Invalid date format'}, status=400)
     profile = request.user.profile
     manual_logs = ConsumptionLog.objects.filter(user_profile=profile, date=date)
     diet_logs = DailyMealLog.objects.filter(user_profile=profile, date=date).first()
-    
     activity = []
-    for log in manual_logs:
-        activity.append({
-            'source': 'food_log',
-            'meal_type': log.meal_type,
-            'title': log.food_item.name,
-            'calories': log.total_calories,
-            'id': log.id
-        })
-    
+    for log in manual_logs: activity.append({'source': 'food_log', 'meal_type': log.meal_type, 'title': log.food_item.name, 'calories': log.total_calories, 'id': log.id})
     if diet_logs:
         meal_labels = {'breakfast': 'Breakfast', 'lunch': 'Lunch', 'dinner': 'Dinner', 'snacks': 'Snack'}
         for key in ('breakfast', 'lunch', 'dinner', 'snacks'):
             content = getattr(diet_logs, f'{key}_content', '')
-            if content:
-                activity.append({
-                    'source': 'diet_plan',
-                    'meal_type': meal_labels[key],
-                    'title': content.splitlines()[0].lstrip('- ').strip(),
-                    'calories': getattr(diet_logs, f'{key}_calories', 0),
-                    'details': content
-                })
-                
+            if content: activity.append({'source': 'diet_plan', 'meal_type': meal_labels[key], 'title': content.splitlines()[0].lstrip('- ').strip(), 'calories': getattr(diet_logs, f'{key}_calories', 0), 'details': content})
     water_log = WaterLog.objects.filter(user_profile=profile, date=date).first()
-    water_data = {
-        'amount': water_log.amount_glasses if water_log else 0,
-        'target': water_log.target_glasses if water_log else profile.water_requirement_glasses
-    }
-    
-    return JsonResponse({
-        'success': True,
-        'activity': activity,
-        'water': water_data
-    })
+    water_data = {'amount': water_log.amount_glasses if water_log else 0, 'target': water_log.target_glasses if water_log else profile.water_requirement_glasses}
+    return JsonResponse({'success': True, 'activity': activity, 'water': water_data})
 
+@login_required
+@csrf_exempt
+@require_http_methods(["POST"])
+def toggle_food_preference_api(request):
+    try:
+        data = json.loads(request.body)
+        food_name = data.get('food_name')
+        meal_type = data.get('meal_type')
+        day_of_week = data.get('day_of_week')
+        
+        if not all([food_name, meal_type, day_of_week]):
+            return JsonResponse({'success': False, 'error': 'Missing required fields'}, status=400)
+            
+        profile = request.user.profile
+        pref, created = FoodPreference.objects.get_or_create(
+            user_profile=profile,
+            food_name=food_name,
+            meal_type=meal_type,
+            day_of_week=day_of_week
+        )
+        
+        if not created:
+            # If it already exists, toggle it
+            pref.is_favorite = not pref.is_favorite
+            pref.save()
+            
+        return JsonResponse({'success': True, 'is_favorite': pref.is_favorite})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+def logout_view(request):
+    if request.user.is_authenticated: logout(request)
+    request.session.flush()
+    return redirect('landing')

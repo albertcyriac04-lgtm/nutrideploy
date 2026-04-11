@@ -1,5 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
+import json
 
 
 class NamedLookupModel(models.Model):
@@ -187,7 +191,7 @@ class SubscriptionPlan(models.Model):
         ordering = ['sort_order', 'amount']
 
     def __str__(self):
-        return f"{self.name} - Rs.{self.amount}"
+        return f"{self.name} - ₹{self.amount}"
 
     @property
     def enabled_features(self):
@@ -387,3 +391,133 @@ class Transaction(models.Model):
     @property
     def plan_name(self):
         return self.plan.name if self.plan else "Plan"
+
+
+class RegistrationOTP(models.Model):
+    """Temporary storage for OTPs during the registration process"""
+    email = models.EmailField(unique=True)
+    otp = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_verified = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = 'registration_otps'
+
+    def is_valid(self):
+        """OTP is valid for 10 minutes"""
+        from django.utils import timezone
+        import datetime
+        return self.created_at >= timezone.now() - datetime.timedelta(minutes=10)
+
+    def __str__(self):
+        return f"OTP for {self.email} - {self.otp}"
+
+
+class FoodPreference(models.Model):
+    """Stores user's favorite foods for specific meals and days"""
+    user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='food_preferences')
+    food_item = models.ForeignKey(FoodItem, on_delete=models.CASCADE, null=True, blank=True)
+    food_name = models.CharField(max_length=255, null=True, blank=True)
+    meal_type = models.CharField(max_length=20, choices=ConsumptionLog.MEAL_TYPE_CHOICES)
+    day_of_week = models.CharField(max_length=15, choices=[
+        ('Monday', 'Monday'), ('Tuesday', 'Tuesday'), ('Wednesday', 'Wednesday'),
+        ('Thursday', 'Thursday'), ('Friday', 'Friday'), ('Saturday', 'Saturday'),
+        ('Sunday', 'Sunday')
+    ])
+    is_favorite = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'food_preferences'
+        unique_together = ['user_profile', 'food_name', 'meal_type', 'day_of_week']
+
+    def __str__(self):
+        return f"{self.user_profile.name}'s fav: {self.food_name or (self.food_item.name if self.food_item else 'Unknown')} for {self.day_of_week} {self.meal_type}"
+
+
+class AdminExpense(models.Model):
+    """Tracks administrative expenses for the platform"""
+    CATEGORY_CHOICES = [
+        ('Infrastructure', 'Infrastructure & Servers'),
+        ('Marketing', 'Marketing & Ads'),
+        ('Operations', 'Operations & Salaries'),
+        ('Software', 'Software Licenses'),
+        ('Other', 'Miscellaneous'),
+    ]
+    title = models.CharField(max_length=255)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
+    date = models.DateField(default=timezone.now)
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'admin_expenses'
+        ordering = ['-date']
+
+    def __str__(self):
+        return f"{self.title} - ₹{self.amount} on {self.date}"
+
+
+class DeletedRecord(models.Model):
+    """Tracks deletions for reporting purposes"""
+    MODEL_CHOICES = [
+        ('User', 'User'),
+        ('FoodItem', 'Food Item'),
+        ('ConsumptionLog', 'Consumption Log'),
+        ('Transaction', 'Transaction'),
+        ('Expense', 'Expense'),
+    ]
+    model_name = models.CharField(max_length=50, choices=MODEL_CHOICES)
+    original_id = models.IntegerField()
+    details = models.TextField(help_text="JSON or string details of the deleted item")
+    deleted_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'deleted_records'
+        ordering = ['-deleted_at']
+
+    def __str__(self):
+        return f"Deleted {self.model_name} (ID: {self.original_id}) at {self.deleted_at}"
+
+
+# Signals to track deletions for reports
+@receiver(post_delete, sender=User)
+def track_user_delete(sender, instance, **kwargs):
+    DeletedRecord.objects.create(
+        model_name='User',
+        original_id=instance.id,
+        details=f"Username: {instance.username}, Email: {instance.email}"
+    )
+
+@receiver(post_delete, sender=FoodItem)
+def track_food_delete(sender, instance, **kwargs):
+    DeletedRecord.objects.create(
+        model_name='FoodItem',
+        original_id=instance.id,
+        details=f"Name: {instance.name}, Category: {instance.category}"
+    )
+
+@receiver(post_delete, sender=ConsumptionLog)
+def track_log_delete(sender, instance, **kwargs):
+    DeletedRecord.objects.create(
+        model_name='ConsumptionLog',
+        original_id=instance.id,
+        details=f"User: {instance.user_profile.name}, Date: {instance.date}, Meal: {instance.meal_type}"
+    )
+
+@receiver(post_delete, sender=Transaction)
+def track_transaction_delete(sender, instance, **kwargs):
+    DeletedRecord.objects.create(
+        model_name='Transaction',
+        original_id=instance.id,
+        details=f"ID: {instance.transaction_id}, Amount: {instance.amount}"
+    )
+
+@receiver(post_delete, sender=AdminExpense)
+def track_expense_delete(sender, instance, **kwargs):
+    DeletedRecord.objects.create(
+        model_name='Expense',
+        original_id=instance.id,
+        details=f"Title: {instance.title}, Amount: {instance.amount}"
+    )

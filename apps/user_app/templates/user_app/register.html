@@ -1,4 +1,4 @@
-﻿{% extends "user_app/base.html" %}
+{% extends "user_app/base.html" %}
 
 {% block title %}Register - NutriDiet{% endblock %}
 
@@ -21,13 +21,29 @@
             <form class="space-y-6" method="POST">
                 {% csrf_token %}
                 {% for field in form %}
-                <div>
+                <div class="field-container" data-field-name="{{ field.name }}">
                     <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-slate-700">
                         {{ field.label }}
                     </label>
-                    <div class="mt-1">
-                        {{ field }}
+                    <div class="mt-1 flex gap-2">
+                        <div class="flex-grow">
+                            {{ field }}
+                        </div>
+                        {% if field.name == 'email' %}
+                        <button type="button" id="send-otp-btn"
+                            class="whitespace-nowrap inline-flex items-center px-4 py-2 border border-emerald-500 rounded-xl text-sm font-medium text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-all">
+                            Send OTP
+                        </button>
+                        {% endif %}
                     </div>
+                    {% if field.name == 'password1' %}
+                    <div id="password-checklist" class="mt-2 text-xs grid grid-cols-2 gap-x-4 gap-y-1 text-slate-500">
+                        <div id="check-length" class="flex items-center gap-1"><span class="check-icon">○</span> 8-50 Characters</div>
+                        <div id="check-upper" class="flex items-center gap-1"><span class="check-icon">○</span> Capital Letter</div>
+                        <div id="check-number" class="flex items-center gap-1"><span class="check-icon">○</span> Number</div>
+                        <div id="check-symbol" class="flex items-center gap-1"><span class="check-icon">○</span> Special Symbol</div>
+                    </div>
+                    {% endif %}
                     {% if field.errors %}
                     <p class="mt-2 text-sm text-red-600">
                         {{ field.errors.0 }}
@@ -36,9 +52,19 @@
                 </div>
                 {% endfor %}
 
+                <div id="otp-section" class="hidden">
+                    <label for="otp_code" class="block text-sm font-medium text-slate-700">
+                        Verification OTP (Check your email)
+                    </label>
+                    <div class="mt-1">
+                        <input type="text" name="otp_code" id="otp_code" placeholder="Enter 6-digit OTP"
+                            class="w-full flex justify-center py-3 px-4 border border-slate-200 rounded-xl shadow-sm text-sm font-medium focus:ring-emerald-500">
+                    </div>
+                </div>
+
                 <div>
-                    <button type="submit"
-                        class="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-emerald-500 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all">
+                    <button type="submit" id="submit-btn" disabled
+                        class="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-slate-400 cursor-not-allowed transition-all">
                         Register
                     </button>
                 </div>
@@ -46,6 +72,95 @@
         </div>
     </div>
 </div>
+
+<script>
+    const sendOtpBtn = document.getElementById('send-otp-btn');
+    const otpSection = document.getElementById('otp-section');
+    const submitBtn = document.getElementById('submit-btn');
+    const regForm = document.querySelector('form');
+
+    const passwordInput = document.querySelector('input[name="password1"]');
+    const requirements = {
+        length: { el: document.getElementById('check-length'), reg: /^.{8,50}$/ },
+        upper: { el: document.getElementById('check-upper'), reg: /[A-Z]/ },
+        number: { el: document.getElementById('check-number'), reg: /[0-9]/ },
+        symbol: { el: document.getElementById('check-symbol'), reg: /[!@#$%^&*(),.?":{}|<>]/ }
+    };
+
+    passwordInput.addEventListener('input', () => {
+        const val = passwordInput.value;
+        for (const [key, req] of Object.entries(requirements)) {
+            const isValid = req.reg.test(val);
+            if (isValid) {
+                req.el.classList.remove('text-slate-500');
+                req.el.classList.add('text-emerald-600', 'font-bold');
+                req.el.querySelector('.check-icon').innerText = '●';
+            } else {
+                req.el.classList.add('text-slate-500');
+                req.el.classList.remove('text-emerald-600', 'font-bold');
+                req.el.querySelector('.check-icon').innerText = '○';
+            }
+        }
+    });
+
+    sendOtpBtn.addEventListener('click', async () => {
+        const emailField = document.querySelector('input[name="email"]');
+        const usernameField = document.querySelector('input[name="username"]');
+        
+        if (!emailField.value || !usernameField.value) {
+            alert('Please enter both username and email first.');
+            return;
+        }
+
+        sendOtpBtn.innerText = 'Sending...';
+        sendOtpBtn.disabled = true;
+
+        try {
+            const response = await fetch('/api/send-otp/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({
+                    email: emailField.value,
+                    username: usernameField.value
+                })
+            });
+            
+            let data;
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.indexOf("application/json") !== -1) {
+                data = await response.json();
+            } else {
+                const text = await response.text();
+                console.error("Non-JSON response:", text);
+                alert('Server returned an error (see console). Status: ' + response.status);
+                sendOtpBtn.innerText = 'Send OTP';
+                sendOtpBtn.disabled = false;
+                return;
+            }
+            
+            if (data.success) {
+                alert(data.message);
+                otpSection.classList.remove('hidden');
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('bg-slate-400', 'cursor-not-allowed');
+                submitBtn.classList.add('bg-emerald-500', 'hover:bg-emerald-700');
+                sendOtpBtn.innerText = 'Resend OTP';
+            } else {
+                alert('Error: ' + data.error);
+                sendOtpBtn.innerText = 'Send OTP';
+            }
+        } catch (err) {
+            console.error("Fetch Error:", err);
+            alert('Failed to send OTP: ' + err.message);
+            sendOtpBtn.innerText = 'Send OTP';
+        } finally {
+            sendOtpBtn.disabled = false;
+        }
+    });
+</script>
 
 <style>
     input {

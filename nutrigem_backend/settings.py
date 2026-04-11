@@ -1,7 +1,5 @@
 """
-Prototype settings entrypoint.
-
-This project now always uses local development settings.
+Django settings entrypoint — imports everything from settings_base.
 """
 
-from .settings_local import *  # noqa: F403,F401
+from .settings_base import *  # noqa: F403,F401

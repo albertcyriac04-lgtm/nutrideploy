@@ -1,6 +1,38 @@
 # NutriDiet Django Backend
 
-Django backend for the NutriDiet prototype with a local MySQL database.
+NutriDiet is a Django-based nutrition and health tracking platform that combines manual logging, AI-assisted diet planning, weight prediction, hydration tracking, and subscription-based premium features.
+
+## What the app does
+
+- Tracks user profiles with body metrics, dietary preferences, allergies, restrictions, and subscription status.
+- Stores food items, meal logs, weight records, and water intake.
+- Generates AI-powered Indian diet plans and nutrition coach responses.
+- Predicts weight trends using machine learning.
+- Supports Pro billing, invoices, and report exports.
+
+## Key Features
+
+- User registration, login, password reset, and profile settings.
+- Dashboard with calorie targets, macros, and progress stats.
+- Manual meal logging and daily meal-plan logging.
+- Water tracking with per-user hydration targets.
+- AI coach chat powered by Google Gemini.
+- AI diet plan generation for standard and advanced planner flows.
+- Weight forecasting with linear regression.
+- PDF and Excel report export.
+- Billing, subscription upgrades, and invoice downloads.
+- Custom Django admin dashboard with analytics.
+
+## Technology Stack
+
+- Django 5.0+
+- Django REST Framework
+- MySQL via `mysqlclient`
+- Google Generative AI
+- Scikit-Learn, NumPy, Pandas
+- ReportLab and OpenPyXL
+- django-cors-headers
+- django-mfa2 and fido2 packages are present in requirements
 
 ## Setup Instructions
 
@@ -106,5 +138,10 @@ The API will be available at `http://localhost:8000/api/`
 ## Admin Panel
 
 Access the Django admin panel at `http://localhost:8000/admin/` to manage data through the web interface.
+
+## Notes
+
+- The main project overview is also available in [project_overview.md](project_overview.md).
+- The codebase uses a custom admin site and separate user-facing views under `apps/`.
 
 

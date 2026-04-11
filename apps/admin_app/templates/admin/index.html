@@ -1,4 +1,4 @@
-﻿{% extends "admin/base_site.html" %}
+{% extends "admin/base_site.html" %}
 {% load i18n static %}
 
 {% block title %}Analytics Dashboard - NutriDiet Admin{% endblock %}
@@ -143,7 +143,7 @@
     }
 
     .nd-charts {
-        grid-template-columns: 2fr 1fr 1fr;
+        grid-template-columns: 1fr 1fr 1fr 1fr;
         margin-bottom: 20px;
     }
 
@@ -298,11 +298,28 @@
             <p>Same visual system as your user app, with live platform analytics.</p>
         </div>
         <div class="nd-header-actions">
-            <a href="{% url 'admin:dashboard_report' %}" class="nd-report-btn">
+            <div style="display:flex; align-items:center; gap:8px; margin-right:12px;">
+                <label style="font-size:0.7rem; font-weight:700; color:var(--nd-muted);">FROM</label>
+                <input type="date" id="reportFrom" class="nd-date-input" style="padding:6px; border-radius:6px; border:1px solid var(--nd-border); font-size:0.75rem;">
+                <label style="font-size:0.7rem; font-weight:700; color:var(--nd-muted);">TO</label>
+                <input type="date" id="reportTo" class="nd-date-input" style="padding:6px; border-radius:6px; border:1px solid var(--nd-border); font-size:0.75rem;">
+            </div>
+            <a href="#" onclick="generateReport()" class="nd-report-btn">
                 <i class="fas fa-file-arrow-down"></i>
                 Generate Report
             </a>
         </div>
+        <script>
+            function generateReport() {
+                const start = document.getElementById('reportFrom').value;
+                const end = document.getElementById('reportTo').value;
+                let url = "{% url 'admin:dashboard_report' %}";
+                if (start && end) {
+                    url += `?from=${start}&to=${end}`;
+                }
+                window.location.href = url;
+            }
+        </script>
     </div>
 
     <div class="nd-grid nd-stats">
@@ -327,12 +344,23 @@
         <div class="nd-card">
             <div class="nd-card-top">
                 <span class="nd-label">Revenue</span>
-                <span class="nd-icon" style="background:#fef3c7; color:#d97706;"><i class="fas fa-dollar-sign"></i></span>
+                <span class="nd-icon" style="background:#fef3c7; color:#d97706;"><i class="fas fa-indian-rupee-sign"></i></span>
             </div>
-            <p class="nd-value">${{ stats.total_revenue|default:0|floatformat:2 }}</p>
+            <p class="nd-value">₹{{ stats.total_revenue|default:0|floatformat:0 }}</p>
             <p class="nd-sub">{{ stats.total_transactions|default:0 }} transactions</p>
         </div>
 
+        <div class="nd-card">
+            <div class="nd-card-top">
+                <span class="nd-label">Expenses</span>
+                <span class="nd-icon" style="background:#fef2f2; color:#ef4444;"><i class="fas fa-money-bill-transfer"></i></span>
+            </div>
+            <p class="nd-value">₹{{ stats.total_expenses|default:0|floatformat:0 }}</p>
+            <p class="nd-sub">₹{{ stats.expenses_week|default:0|floatformat:0 }} this week</p>
+        </div>
+    </div>
+    
+    <div class="nd-grid" style="grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px;">
         <div class="nd-card">
             <div class="nd-card-top">
                 <span class="nd-label">Food Items</span>
@@ -340,6 +368,33 @@
             </div>
             <p class="nd-value">{{ stats.total_food_items|default:0 }}</p>
             <p class="nd-sub">{{ stats.total_consumption_logs|default:0 }} logs recorded</p>
+        </div>
+
+        <div class="nd-card">
+            <div class="nd-card-top">
+                <span class="nd-label">System Health</span>
+                <span class="nd-icon" style="background:#f0f9ff; color:#0ea5e9;"><i class="fas fa-trash-can"></i></span>
+            </div>
+            <p class="nd-value">{{ stats.total_deleted|default:0 }}</p>
+            <p class="nd-sub">Deleted items tracked</p>
+        </div>
+        
+        <div class="nd-card" style="opacity: 0.5;">
+            <div class="nd-card-top">
+                <span class="nd-label">AI Preferences</span>
+                <span class="nd-icon" style="background:#f5f3ff; color:#8b5cf6;"><i class="fas fa-brain"></i></span>
+            </div>
+            <p class="nd-value">Active</p>
+            <p class="nd-sub">Food learning enabled</p>
+        </div>
+
+        <div class="nd-card" style="opacity: 0.5;">
+            <div class="nd-card-top">
+                <span class="nd-label">Target Rate</span>
+                <span class="nd-icon" style="background:#ecfdf5; color:#10b981;"><i class="fas fa-bullseye"></i></span>
+            </div>
+            <p class="nd-value">92%</p>
+            <p class="nd-sub">Engagement score</p>
         </div>
     </div>
 
@@ -357,7 +412,13 @@
             </div>
         </div>
         <div class="nd-card">
-            <h3 class="nd-panel-title"><i class="fas fa-chart-bar" style="color:#0ea5e9; margin-right:6px;"></i>Today Activity Mix</h3>
+            <h3 class="nd-panel-title"><i class="fas fa-chart-pie" style="color:#ef4444; margin-right:6px;"></i>Expense Split</h3>
+            <div class="nd-chart-wrap">
+                <canvas id="expenseChart"></canvas>
+            </div>
+        </div>
+        <div class="nd-card">
+            <h3 class="nd-panel-title"><i class="fas fa-chart-bar" style="color:#0ea5e9; margin-right:6px;"></i>Today Activity</h3>
             <div class="nd-chart-mini-wrap">
                 <canvas id="activityChart"></canvas>
             </div>
@@ -535,6 +596,33 @@
                     x: {
                         ticks: { color: '#64748b', font: { weight: '600' } },
                         grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
+
+    const expenseCanvas = document.getElementById('expenseChart');
+    if (expenseCanvas) {
+        const expCtx = expenseCanvas.getContext('2d');
+        new Chart(expCtx, {
+            type: 'doughnut',
+            data: {
+                labels: {{ expense_labels|safe }},
+                datasets: [{
+                    data: {{ expense_data|safe }},
+                    backgroundColor: ['#ef4444', '#f97316', '#06b6d4', '#8b5cf6', '#64748b'],
+                    borderWidth: 0,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { boxWidth: 10, padding: 10, font: { size: 10 } }
                     }
                 }
             }
