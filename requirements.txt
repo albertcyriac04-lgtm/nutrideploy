@@ -9,6 +9,7 @@ numpy
 pandas
 reportlab
 openpyxl
+matplotlib
 
 # Database (Neon/PostgreSQL)
 psycopg2-binary
