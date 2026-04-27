@@ -138,6 +138,14 @@ OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "openai/gpt-4o-mini")
 DEBUG = os.getenv("DEBUG", "True") == "True"
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,*.vercel.app").split(",")
 CORS_ALLOW_ALL_ORIGINS = DEBUG
+ALLOWED_HOSTS = [
+    'localhost', 
+    '127.0.0.1', 
+    'nutrideploy.vercel.app',  # Add this explicitly
+    '.vercel.app'              # This allows all vercel subdomains
+]
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Firebase configuration (Admin SDK)
 FIREBASE_CREDENTIALS_PATH = os.getenv("FIREBASE_CREDENTIALS_PATH")
