@@ -5,6 +5,7 @@ Base Django settings shared across all environments.
 from pathlib import Path
 import os
 import sys
+import dj_database_url
 
 from dotenv import load_dotenv
 
@@ -33,6 +34,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -63,19 +65,13 @@ TEMPLATES = [
 WSGI_APPLICATION = "nutrigem_backend.wsgi.application"
 ASGI_APPLICATION = "nutrigem_backend.asgi.application"
 
+# Database configuration
+# Use DATABASE_URL if available (standard for Vercel/Postgres), otherwise fallback to MySQL
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.mysql",
-        "NAME": os.getenv("DB_NAME", "nutrigem_db"),
-        "USER": os.getenv("DB_USER", "root"),
-        "PASSWORD": os.getenv("DB_PASSWORD", "1234"),
-        "HOST": os.getenv("DB_HOST", "localhost"),
-        "PORT": os.getenv("DB_PORT", "3306"),
-        "OPTIONS": {
-            "charset": "utf8mb4",
-            "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
-        },
-    }
+    "default": dj_database_url.config(
+        default=f'mysql://{os.getenv("DB_USER", "root")}:{os.getenv("DB_PASSWORD", "1234")}@{os.getenv("DB_HOST", "localhost")}:{os.getenv("DB_PORT", "3306")}/{os.getenv("DB_NAME", "nutrigem_db")}',
+        conn_max_age=600,
+    )
 }
 
 
@@ -94,6 +90,9 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Use WhiteNoise for serving static files in production
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -134,7 +133,11 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "openai/gpt-4o-mini")
 
-# ── Environment-specific settings (formerly settings_local.py) ──────────────
+# ── Environment-specific settings ───────────────────────────────────────────
 DEBUG = os.getenv("DEBUG", "True") == "True"
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "*"]
-CORS_ALLOW_ALL_ORIGINS = DEBUG  # convenience for local frontend dev
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,*.vercel.app").split(",")
+CORS_ALLOW_ALL_ORIGINS = DEBUG
+
+# Firebase configuration (Admin SDK)
+FIREBASE_CREDENTIALS_PATH = os.getenv("FIREBASE_CREDENTIALS_PATH")
+FIREBASE_DATABASE_URL = os.getenv("FIREBASE_DATABASE_URL")

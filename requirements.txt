@@ -11,6 +11,14 @@ pandas
 reportlab
 openpyxl
 
+# Production & Deployment
+gunicorn
+whitenoise
+dj-database-url
+psycopg2-binary
+
+# Firebase
+firebase-admin
 
 django-mfa2
 fido2
