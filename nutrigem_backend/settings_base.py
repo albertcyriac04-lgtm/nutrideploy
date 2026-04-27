@@ -66,11 +66,12 @@ WSGI_APPLICATION = "nutrigem_backend.wsgi.application"
 ASGI_APPLICATION = "nutrigem_backend.asgi.application"
 
 # Database configuration
-# Use DATABASE_URL if available (standard for Vercel/Postgres), otherwise fallback to MySQL
+# Optimized for Neon (Postgres) via DATABASE_URL
 DATABASES = {
     "default": dj_database_url.config(
-        default=f'mysql://{os.getenv("DB_USER", "root")}:{os.getenv("DB_PASSWORD", "1234")}@{os.getenv("DB_HOST", "localhost")}:{os.getenv("DB_PORT", "3306")}/{os.getenv("DB_NAME", "nutrigem_db")}',
+        default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
         conn_max_age=600,
+        conn_health_checks=True,
     )
 }
 

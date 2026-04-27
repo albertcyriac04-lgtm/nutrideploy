@@ -1,7 +1,6 @@
 Django==5.0.1
 djangorestframework==3.14.0
 django-cors-headers==4.3.1
-mysqlclient>=2.2.7
 python-dotenv==1.0.0
 Pillow>=11.2.1
 google-generativeai
@@ -11,11 +10,13 @@ pandas
 reportlab
 openpyxl
 
+# Database (Neon/PostgreSQL)
+psycopg2-binary
+dj-database-url
+
 # Production & Deployment
 gunicorn
 whitenoise
-dj-database-url
-psycopg2-binary
 
 # Firebase
 firebase-admin
